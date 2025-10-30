@@ -1,7 +1,7 @@
 // js/mapService.js
 
 let capaRutaBus = null;
-let capaRutaCaminar = null; // Lo mantenemos para limpiarlo
+let capaRutaCaminar = null;
 let userMarker = null;
 export let marcadores = null;
 export let map = null;
@@ -77,16 +77,16 @@ export function limpiarCapasDeRuta() {
         capaRutaBus = null;
     }
     if (capaRutaCaminar) {
-        // LRM era un control, así que se elimina diferente
-        if (capaRutaCaminar.remove) {
-             capaRutaCaminar.remove();
+        // Esto ahora maneja la polilínea
+        if (map.hasLayer(capaRutaCaminar)) {
+            map.removeLayer(capaRutaCaminar);
         }
         capaRutaCaminar = null;
     }
 }
 
 /**
- * ¡REVERTIDO! Vuelve a dibujar la línea recta punteada (confiable)
+ * ¡REVERTIDO! Dibuja la línea recta punteada (confiable)
  */
 export function dibujarPaso(paso, puntoInicio) {
     limpiarCapasDeRuta();

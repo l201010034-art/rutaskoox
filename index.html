@@ -2,13 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">        <title>Rutas Koox Campeche</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Rutas Koox Campeche</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
     <link rel="manifest" href="manifest.json">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <link rel="stylesheet" href="style.css" />
@@ -17,13 +16,10 @@
 
     <div id="map"></div>
 
-    <div id="panel-control">
+    <div id="panel-control" class="oculto">
         <div class="panel-header">
             <h3>Guía de Rutas Koox</h3>
         </div>
-    <div id="panel-toggle">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18h16v-2H4v2zM4 13h16v-2H4v2zM4 6v2h16V6H4z"/></svg>
-    </div>
         
         <div id="controles-viaje">
             <div class="control-grupo">
@@ -35,9 +31,9 @@
                 <label for="selectDestino">Destino:</label>
                 <select id="selectDestino">
                     <option value="">Escribe o selecciona un destino...</option>
-                    </select>
+                </select>
             </div>
-            </div>
+        </div>
 
         <div id="panel-instrucciones">
             <p id="instrucciones">Selecciona tu destino para ver la ruta.</p>
@@ -45,6 +41,10 @@
         
         <button id="btnIniciarRuta" style="display:none;">Iniciar Ruta</button>
         <button id="btnLimpiar" style="display:none;">Nueva Búsqueda</button>
+    </div>
+
+    <div id="panel-toggle">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18h16v-2H4v2zM4 13h16v-2H4v2zM4 6v2h16V6H4z"/></svg>
     </div>
 
     <div id="panel-navegacion" style="display:none;">
@@ -59,6 +59,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-    <script type="module" src="js/app.js"></script></body>
+    <script type="module" src="js/app.js"></script>
+</body>
 </html>
