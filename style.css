@@ -95,15 +95,13 @@ body, html {
 #btnIniciarRuta:hover { background-color: #0056b3; }
 #btnLimpiar:hover { background-color: #5a6268; }
 
-/* --- ¡ESTILOS CORREGIDOS! --- */
-
-/* Panel de Navegación (Arreglo de Zoom) */
+/* Panel de Navegación */
 #panel-navegacion {
     position: absolute;
     top: 10px;
     left: 10px;
-    width: 320px; /* <--- Ancho fijo */
-    max-width: calc(100% - 20px); /* <--- Ancho máximo */
+    width: 320px; 
+    max-width: calc(100% - 20px); 
     background: white;
     z-index: 1001; 
     border-radius: 8px;
@@ -111,10 +109,9 @@ body, html {
     display: flex;
     flex-direction: column;
     padding: 15px;
-    box-sizing: border-box; /* Importante */
+    box-sizing: border-box;
 }
 
-/* Estilos de Botones de Navegación */
 #instruccion-actual {
     font-size: 1.2em;
     font-weight: bold;
@@ -142,12 +139,12 @@ body, html {
     border-color: #dc3545;
 }
 
-/* Burbuja (Arreglo de Posición) */
+/* --- ¡ESTILOS CORREGIDOS PARA LA BURBUJA! --- */
 #panel-toggle {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 1001; /* Encima del mapa */
+    z-index: 1001;
     background-color: white;
     border-radius: 50%;
     width: 40px;
@@ -157,8 +154,9 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.3s ease, transform 0.3s ease; /* Transición suave */
-    opacity: 0; /* Oculto por defecto */
+    transition: opacity 0.3s ease; /* Solo transicionamos la opacidad */
+    opacity: 0; /* Oculta por defecto */
+    transform: translateX(0); /* ¡NUNCA SE MUEVE! */
 }
 #panel-toggle svg {
     width: 24px;
@@ -168,22 +166,23 @@ body, html {
 /* Cuando el panel está oculto, la burbuja aparece */
 #panel-control.oculto + #panel-toggle {
     opacity: 1;
-    transform: translateX(0); /* Posición normal */
+    pointer-events: all; /* Se puede hacer clic */
 }
 
-/* Cuando el panel está visible, la burbuja se oculta (con opacidad) */
+/* Cuando el panel está visible, la burbuja se oculta */
 #panel-control:not(.oculto) + #panel-toggle {
     opacity: 0;
-    transform: translateX(0); /* Se queda en su sitio, solo desaparece */
+    pointer-events: none; /* No se puede hacer clic */
 }
 
 /* Oculta la burbuja si estamos en modo navegación */
 #panel-navegacion:not([style*="display:none"]) ~ #panel-toggle {
     display: none;
 }
+/* --- FIN DE ESTILOS CORREGIDOS --- */
 
 
-/* Estilos de Opciones de Ruta (sin cambios) */
+/* Estilos de Opciones de Ruta */
 .opcion-ruta {
     border: 1px solid #ddd;
     border-radius: 4px;
