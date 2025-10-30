@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rutas Koox Campeche</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="manifest" href="manifest.json">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div id="panel-control">
+        <div class="panel-header">
+            <h3>Guía de Rutas Koox</h3>
+        </div>
+        
+        <div id="controles-viaje">
+            <div class="control-grupo">
+                <label for="inputInicio">Inicio:</label>
+                <input type="text" id="inputInicio" value="Detectando tu ubicación..." readonly>
+            </div>
+            
+            <div class="control-grupo">
+                <label for="selectDestino">Destino:</label>
+                <select id="selectDestino">
+                    <option value="">Escribe o selecciona un destino...</option>
+                    </select>
+            </div>
+            </div>
+
+        <div id="panel-instrucciones">
+            <p id="instrucciones">Selecciona tu destino para ver la ruta.</p>
+        </div>
+        
+        <button id="btnIniciarRuta" style="display:none;">Iniciar Ruta</button>
+        <button id="btnLimpiar" style="display:none;">Nueva Búsqueda</button>
+    </div>
+
+    <div id="panel-navegacion" style="display:none;">
+        <div id="instruccion-actual"></div>
+        <div id="controles-nav">
+            <button id="btnAnterior" disabled>Anterior</button>
+            <button id="btnSiguiente">Siguiente</button>
+            <button id="btnFinalizar">Finalizar</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <script type="module" src="js/app.js"></script></body>
+</html>

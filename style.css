@@ -1,0 +1,162 @@
+/* Reseteo básico y layout */
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: Arial, sans-serif;
+    overflow: hidden; 
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+    z-index: 1; 
+}
+
+/* Panel de control flotante */
+#panel-control {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 320px;
+    max-height: 95%;
+    background-color: white;
+    z-index: 1000; 
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease-in-out;
+}
+
+#panel-control.oculto {
+    transform: translateX(-400px); 
+}
+
+.panel-header {
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+}
+.panel-header h3 { margin: 0; }
+
+#controles-viaje { 
+    padding: 15px; 
+    /* ¡NUEVO! Evita que el dropdown se corte */
+    overflow: visible;
+}
+
+.control-grupo { 
+    margin-bottom: 10px; 
+    /* ¡NUEVO! Necesario para Choices.js */
+    position: relative;
+    z-index: 10;
+}
+.control-grupo label {
+    display: block;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.control-grupo input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box; 
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+#inputInicio { background: #f0f0f0; font-style: italic; }
+
+/* ¡NUEVO! Ajuste para que Choices.js no se corte */
+#panel-control .choices {
+    z-index: 11;
+}
+
+#panel-instrucciones {
+    padding: 0 15px 15px 15px;
+    overflow-y: auto; 
+    border-top: 1px solid #eee;
+}
+#panel-instrucciones p { margin-top: 0; }
+
+/* Botones */
+#btnIniciarRuta, #btnLimpiar {
+    display: block;
+    width: calc(100% - 30px);
+    margin: 0 15px 15px 15px;
+    padding: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#btnIniciarRuta { background-color: #007bff; }
+#btnLimpiar { background-color: #6c757d; }
+#btnIniciarRuta:hover { background-color: #0056b3; }
+#btnLimpiar:hover { background-color: #5a6268; }
+
+/* Estilos de Navegación (sin cambios) */
+#panel-navegacion {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    background: white;
+    z-index: 1001; 
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+}
+#instruccion-actual {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+#controles-nav {
+    display: flex;
+    justify-content: space-between;
+}
+#controles-nav button {
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    background: #f8f8f8;
+    border-radius: 4px;
+    cursor: pointer;
+}
+#controles-nav button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+#btnFinalizar {
+    background-color: #dc3545; /* Rojo */
+    color: white;
+    border-color: #dc3545;
+}
+
+/* Estilos de Opciones de Ruta (sin cambios) */
+.opcion-ruta {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    padding: 10px;
+}
+.opcion-ruta h4 {
+    margin-top: 0;
+    color: #007bff;
+}
+.opcion-ruta .btn-seleccionar {
+    background-color: #28a745;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+.opcion-ruta .btn-seleccionar:hover {
+    background-color: #218838;
+}

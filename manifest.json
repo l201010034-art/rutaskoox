@@ -1,0 +1,16 @@
+{
+  "name": "Rutas Koox Campeche",
+  "short_name": "Rutas Koox",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "description": "Tu guía de transporte público en Campeche.",
+  "icons": [
+    {
+      "src": "images/icon-512.png",  
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
