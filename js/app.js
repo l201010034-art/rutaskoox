@@ -18,7 +18,7 @@ let autoCentrar = true;
 let puntoInicio = null; 
 let paraderoInicioCercano = null;
 let paraderoFin = null;
-
+let panelToggle;
 let choicesDestino = null;
 
 // --- 3. REFERENCIAS AL DOM ---
@@ -136,9 +136,6 @@ function initChoicesSelect() {
     });
 }
 
-// ... (El resto de app.js: limpiarMapa, mostrarPlanes, iniciarRutaProgresiva, etc...)
-// ... (El resto del código es idéntico al de la respuesta anterior)
-
 // --- (Copiado del final del archivo anterior para completitud) ---
 
 btnLimpiar.addEventListener('click', limpiarMapa);
@@ -146,6 +143,9 @@ btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
 btnSiguiente.addEventListener('click', siguientePaso);
 btnAnterior.addEventListener('click', pasoAnterior);
 btnFinalizar.addEventListener('click', finalizarRuta);
+panelToggle = document.getElementById('panel-toggle');
+    panelToggle.addEventListener('click', togglePanel);
+    panelControl.classList.add('oculto');
 
 function limpiarMapa() {
     dibujarPlan([]);
@@ -179,6 +179,9 @@ function limpiarMapa() {
         map.setView([coords[1], coords[0]], 16);
         crearMarcadorUsuario([coords[1], coords[0]]).bindPopup("<b>Estás aquí</b>").openPopup();
     }
+}
+function togglePanel() {
+    panelControl.classList.toggle('oculto');
 }
 
 function mostrarPlanes(planes) {
@@ -352,6 +355,7 @@ function mostrarPaso(indice) {
         }
     }
 }
+
 
 // --- 8. REGISTRO DEL SERVICE WORKER (PWA) ---
 if ('serviceWorker' in navigator) {

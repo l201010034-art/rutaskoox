@@ -1,34 +1,25 @@
 // js/mapService.js
 
-// Almacenaremos las capas aquí
 let capaRutaBus = null;
-let capaRutaCaminar = null; // ¡NUEVO!
+let capaRutaCaminar = null; // Lo mantenemos para limpiarlo
 let userMarker = null;
 export let marcadores = null;
 export let map = null;
 
-/**
- * Inicializa el mapa de Leaflet y las capas.
- */
 export function initMap() {
     map = L.map('map', {
-        zoomControl: false // Desactivamos el zoom +/- por defecto
+        zoomControl: false
     }).setView([19.830, -90.528], 13);
     
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
-    // Añadimos el control de zoom en otra esquina
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    
     marcadores = L.layerGroup().addTo(map);
     return map;
 }
 
-/**
- * Crea o actualiza el marcador azul del usuario.
- */
 export function crearMarcadorUsuario(latlng) {
     if (userMarker) {
         userMarker.setLatLng(latlng);
@@ -44,9 +35,6 @@ export function crearMarcadorUsuario(latlng) {
     return userMarker;
 }
 
-/**
- * Dibuja uno o varios planes de ruta en el mapa (para la vista de opciones).
- */
 export function dibujarPlan(planes) {
     limpiarCapasDeRuta();
     
@@ -82,9 +70,6 @@ export function dibujarPlan(planes) {
     }
 }
 
-/**
- * ¡NUEVO! Limpia todas las capas de ruta y marcadores.
- */
 export function limpiarCapasDeRuta() {
     marcadores.clearLayers();
     if (capaRutaBus) {
@@ -92,16 +77,16 @@ export function limpiarCapasDeRuta() {
         capaRutaBus = null;
     }
     if (capaRutaCaminar) {
-        map.removeLayer(capaRutaCaminar);
+        // LRM era un control, así que se elimina diferente
+        if (capaRutaCaminar.remove) {
+             capaRutaCaminar.remove();
+        }
         capaRutaCaminar = null;
     }
 }
 
 /**
- * ¡ACTUALIZADO! Dibuja un ÚNICO paso de la navegación.
- * Ahora usa LRM para caminar.
- * @param {object} paso - El objeto del paso.
- * @param {object} puntoInicio - El punto de inicio del usuario (Feature de Turf).
+ * ¡REVERTIDO! Vuelve a dibujar la línea recta punteada (confiable)
  */
 export function dibujarPaso(paso, puntoInicio) {
     limpiarCapasDeRuta();
@@ -109,31 +94,21 @@ export function dibujarPaso(paso, puntoInicio) {
     const inicioCoords = puntoInicio.geometry.coordinates; // [lon, lat]
     const inicioLatLng = [inicioCoords[1], inicioCoords[0]]; // [lat, lon]
 
+    let bounds;
     switch(paso.tipo) {
         case 'caminar':
             const finLatLng = paso.paradero.geometry.coordinates.slice().reverse(); // [lat, lon]
             
-            // ¡NUEVO! Usar Leaflet Routing Machine
-            capaRutaCaminar = L.Routing.control({
-                waypoints: [
-                    L.latLng(inicioLatLng),
-                    L.latLng(finLatLng)
-                ],
-                routeWhileDragging: false,
-                addWaypoints: false, // No permitir que el usuario añada más puntos
-                draggableWaypoints: false,
-                createMarker: function() { return null; }, // No crear marcadores (ya tenemos el azul)
-                lineOptions: {
-                    styles: [{color: 'blue', opacity: 0.7, weight: 5, dashArray: '10, 10'}]
-                }
+            // Dibujar una línea recta punteada (confiable)
+            capaRutaCaminar = L.polyline([inicioLatLng, finLatLng], {
+                color: 'blue',
+                weight: 5,
+                opacity: 0.7,
+                dashArray: '10, 10'
             }).addTo(map);
             
-            // LRM es asíncrono, ajustamos el zoom cuando la ruta esté lista
-            capaRutaCaminar.on('routesfound', function(e) {
-                map.fitBounds(e.routes[0].bounds.pad(0.2));
-            });
-            
             L.marker(finLatLng).addTo(marcadores).bindPopup(`Paradero: ${paso.paradero.properties.nombre}`);
+            bounds = L.latLngBounds(inicioLatLng, finLatLng);
             break;
             
         case 'bus':
@@ -145,8 +120,7 @@ export function dibujarPaso(paso, puntoInicio) {
             const pFin = paso.paraderoFin.geometry.coordinates.slice().reverse();
             L.marker(pInicio).addTo(marcadores).bindPopup(`Subir en: ${paso.paraderoInicio.properties.nombre}`);
             L.marker(pFin).addTo(marcadores).bindPopup(`Bajar en: ${paso.paraderoFin.properties.nombre}`);
-            
-            map.fitBounds(capaRutaBus.getBounds().pad(0.2));
+            bounds = capaRutaBus.getBounds();
             break;
         
         case 'transbordo':
@@ -165,4 +139,7 @@ export function dibujarPaso(paso, puntoInicio) {
             map.setView(pDestino, 17);
             break;
     }
+
+    // Devolvemos los límites para que app.js haga el zoom
+    return bounds;
 }

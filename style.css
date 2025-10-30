@@ -160,3 +160,41 @@ body, html {
 .opcion-ruta .btn-seleccionar:hover {
     background-color: #218838;
 }
+
+/* ¡NUEVO! Estilos para el botón "Burbuja" (Toggle) */
+#panel-toggle {
+    position: absolute;
+    top: 10px;
+    left: 10px; /* Inicia en la misma posición que el panel */
+    z-index: 1001; /* Encima del panel */
+    background-color: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease-in-out;
+}
+#panel-toggle svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Cuando el panel esté oculto, mueve el botón a la vista */
+#panel-control.oculto + #panel-toggle {
+    transform: translateX(0); /* Lo mantiene visible */
+}
+
+/* Oculta el botón cuando el panel está visible */
+/* (Lo movemos junto con el panel) */
+#panel-toggle {
+    transform: translateX(330px); /* 320px del panel + 10px de margen */
+}
+
+/* Oculta el botón si estamos en modo navegación */
+#panel-navegacion:not([style*="display:none"]) + #panel-toggle {
+    display: none;
+}
