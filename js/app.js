@@ -21,13 +21,16 @@ let paraderoFin = null;
 let choicesDestino = null;
 
 // --- 3. REFERENCIAS AL DOM (Solo declaradas) ---
+// ¡Las asignaremos una vez que el DOM esté listo!
 let selectDestino, inputInicio, instruccionesEl, btnIniciarRuta, btnLimpiar;
 let panelControl, panelNavegacion, instruccionActualEl, btnAnterior, btnSiguiente, btnFinalizar, panelToggle;
+
 
 // --- 4. ARRANQUE DE LA APP ---
 document.addEventListener('DOMContentLoaded', async () => {
     
-    // --- ¡CORRECCIÓN! Asignar DOM aquí ---
+    // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+    // Asignamos todas las referencias al DOM aquí
     selectDestino = document.getElementById('selectDestino');
     inputInicio = document.getElementById('inputInicio');
     instruccionesEl = document.getElementById('instrucciones');
@@ -41,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnFinalizar = document.getElementById('btnFinalizar');
     panelToggle = document.getElementById('panel-toggle');
     
-    // Conectar el botón burbuja
+    // Y AHORA conectamos los eventos
     panelToggle.addEventListener('click', togglePanel);
     panelControl.classList.add('oculto'); // Ocultar panel al inicio
     // --- FIN CORRECCIÓN ---
@@ -204,7 +207,7 @@ function mostrarPlanes(planes) {
     if (!planes || planes.length === 0) {
         instruccionesEl.innerHTML = `
             <p><strong>Ruta no encontrada</strong></p>
-            <p>No se pudo encontrar una ruta con menos de 4 buses (límite de 3 transbordos).</p>
+            <p>No se pudo encontrar una ruta con menos de 4 buses (límite de 4 transbordos).</p>
         `;
         btnIniciarRuta.style.display = 'none';
         btnLimpiar.style.display = 'block';
@@ -355,10 +358,10 @@ function mostrarPaso(indice) {
     if (autoCentrar && bounds && bounds.isValid()) {
         map.fitBounds(bounds.pad(0.2));
     } else if (autoCentrar && !bounds) {
-        // Para pasos sin 'bounds' (ej. transbordo)
         map.setView(map.getCenter(), 17);
     }
 }
+
 
 // --- 8. REGISTRO DEL SERVICE WORKER (PWA) ---
 if ('serviceWorker' in navigator) {

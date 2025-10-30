@@ -147,7 +147,7 @@ body, html {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 1001; /* Encima del panel de mapa, pero debajo del panel de control */
+    z-index: 1001; /* Encima del mapa */
     background-color: white;
     border-radius: 50%;
     width: 40px;
@@ -157,7 +157,7 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease; /* Transición suave */
     opacity: 0; /* Oculto por defecto */
 }
 #panel-toggle svg {
@@ -168,12 +168,20 @@ body, html {
 /* Cuando el panel está oculto, la burbuja aparece */
 #panel-control.oculto + #panel-toggle {
     opacity: 1;
+    transform: translateX(0); /* Posición normal */
+}
+
+/* Cuando el panel está visible, la burbuja se oculta (con opacidad) */
+#panel-control:not(.oculto) + #panel-toggle {
+    opacity: 0;
+    transform: translateX(0); /* Se queda en su sitio, solo desaparece */
 }
 
 /* Oculta la burbuja si estamos en modo navegación */
 #panel-navegacion:not([style*="display:none"]) ~ #panel-toggle {
     display: none;
 }
+
 
 /* Estilos de Opciones de Ruta (sin cambios) */
 .opcion-ruta {
