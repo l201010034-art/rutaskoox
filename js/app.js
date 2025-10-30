@@ -34,6 +34,9 @@ const instruccionActualEl = document.getElementById('instruccion-actual');
 const btnAnterior = document.getElementById('btnAnterior');
 const btnSiguiente = document.getElementById('btnSiguiente');
 const btnFinalizar = document.getElementById('btnFinalizar');
+panelToggle = document.getElementById('panel-toggle');
+    panelToggle.addEventListener('click', togglePanel);
+    panelControl.classList.add('oculto');
 
 
 // --- 4. ARRANQUE DE LA APP ---
@@ -143,9 +146,7 @@ btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
 btnSiguiente.addEventListener('click', siguientePaso);
 btnAnterior.addEventListener('click', pasoAnterior);
 btnFinalizar.addEventListener('click', finalizarRuta);
-panelToggle = document.getElementById('panel-toggle');
-    panelToggle.addEventListener('click', togglePanel);
-    panelControl.classList.add('oculto');
+
 
 function limpiarMapa() {
     dibujarPlan([]);
@@ -196,7 +197,7 @@ function mostrarPlanes(planes) {
     if (!planes || planes.length === 0) {
         instruccionesEl.innerHTML = `
             <p><strong>Ruta no encontrada</strong></p>
-            <p>No se pudo encontrar una ruta con menos de 4 buses (límite de 3 transbordos).</p>
+            <p>No se pudo encontrar una ruta con menos de 4 buses (límite de 4 transbordos).</p>
         `;
         btnIniciarRuta.style.display = 'none';
         btnLimpiar.style.display = 'block';
