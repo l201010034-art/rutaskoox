@@ -18,29 +18,34 @@ let autoCentrar = true;
 let puntoInicio = null; 
 let paraderoInicioCercano = null;
 let paraderoFin = null;
-let panelToggle;
 let choicesDestino = null;
 
-// --- 3. REFERENCIAS AL DOM ---
-const selectDestino = document.getElementById('selectDestino');
-const inputInicio = document.getElementById('inputInicio');
-// ... (el resto de las referencias)
-const instruccionesEl = document.getElementById('instrucciones');
-const btnIniciarRuta = document.getElementById('btnIniciarRuta');
-const btnLimpiar = document.getElementById('btnLimpiar');
-const panelControl = document.getElementById('panel-control');
-const panelNavegacion = document.getElementById('panel-navegacion');
-const instruccionActualEl = document.getElementById('instruccion-actual');
-const btnAnterior = document.getElementById('btnAnterior');
-const btnSiguiente = document.getElementById('btnSiguiente');
-const btnFinalizar = document.getElementById('btnFinalizar');
-panelToggle = document.getElementById('panel-toggle');
-    panelToggle.addEventListener('click', togglePanel);
-    panelControl.classList.add('oculto');
-
+// --- 3. REFERENCIAS AL DOM (Solo declaradas) ---
+let selectDestino, inputInicio, instruccionesEl, btnIniciarRuta, btnLimpiar;
+let panelControl, panelNavegacion, instruccionActualEl, btnAnterior, btnSiguiente, btnFinalizar, panelToggle;
 
 // --- 4. ARRANQUE DE LA APP ---
 document.addEventListener('DOMContentLoaded', async () => {
+    
+    // --- ¡CORRECCIÓN! Asignar DOM aquí ---
+    selectDestino = document.getElementById('selectDestino');
+    inputInicio = document.getElementById('inputInicio');
+    instruccionesEl = document.getElementById('instrucciones');
+    btnIniciarRuta = document.getElementById('btnIniciarRuta');
+    btnLimpiar = document.getElementById('btnLimpiar');
+    panelControl = document.getElementById('panel-control');
+    panelNavegacion = document.getElementById('panel-navegacion');
+    instruccionActualEl = document.getElementById('instruccion-actual');
+    btnAnterior = document.getElementById('btnAnterior');
+    btnSiguiente = document.getElementById('btnSiguiente');
+    btnFinalizar = document.getElementById('btnFinalizar');
+    panelToggle = document.getElementById('panel-toggle');
+    
+    // Conectar el botón burbuja
+    panelToggle.addEventListener('click', togglePanel);
+    panelControl.classList.add('oculto'); // Ocultar panel al inicio
+    // --- FIN CORRECCIÓN ---
+
     initMap(); 
     
     try {
@@ -76,7 +81,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log("¡Enlace completado!");
         paraderosCollection = turf.featureCollection(todosLosParaderos);
         
-        // ¡Esta es la función correcta!
         initChoicesSelect();
         
         getUbicacionUsuario(handleInitialLocation, handleLocationError);
@@ -107,7 +111,6 @@ function handleLocationError(err) {
     inputInicio.value = "No se pudo obtener ubicación";
 }
 
-// ¡Esta es la función que debe estar (en lugar de poblarSelectDestinos)!
 function initChoicesSelect() {
     const choicesData = todosLosParaderos.map(paradero => ({
         value: paradero.properties.originalIndex,
@@ -139,14 +142,11 @@ function initChoicesSelect() {
     });
 }
 
-// --- (Copiado del final del archivo anterior para completitud) ---
-
 btnLimpiar.addEventListener('click', limpiarMapa);
 btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
 btnSiguiente.addEventListener('click', siguientePaso);
 btnAnterior.addEventListener('click', pasoAnterior);
 btnFinalizar.addEventListener('click', finalizarRuta);
-
 
 function limpiarMapa() {
     dibujarPlan([]);
@@ -171,7 +171,7 @@ function limpiarMapa() {
     btnLimpiar.style.display = 'none';
     
     panelNavegacion.style.display = 'none';
-    panelControl.classList.remove('oculto');
+    panelControl.classList.add('oculto'); // Ocultar el panel
     
     detenerWatchLocation(watchId);
     
@@ -181,9 +181,16 @@ function limpiarMapa() {
         crearMarcadorUsuario([coords[1], coords[0]]).bindPopup("<b>Estás aquí</b>").openPopup();
     }
 }
+
+/**
+ * Muestra u oculta el panel de búsqueda
+ */
 function togglePanel() {
     panelControl.classList.toggle('oculto');
 }
+
+
+// --- 6. LÓGICA DE NAVEGACIÓN (UI) ---
 
 function mostrarPlanes(planes) {
     instruccionesEl.innerHTML = '';
@@ -197,7 +204,7 @@ function mostrarPlanes(planes) {
     if (!planes || planes.length === 0) {
         instruccionesEl.innerHTML = `
             <p><strong>Ruta no encontrada</strong></p>
-            <p>No se pudo encontrar una ruta con menos de 4 buses (límite de 4 transbordos).</p>
+            <p>No se pudo encontrar una ruta con menos de 4 buses (límite de 3 transbordos).</p>
         `;
         btnIniciarRuta.style.display = 'none';
         btnLimpiar.style.display = 'block';
@@ -341,22 +348,17 @@ function mostrarPaso(indice) {
     btnSiguiente.disabled = esUltimoPaso;
     btnFinalizar.style.display = esUltimoPaso ? 'block' : 'none';
     btnSiguiente.style.display = esUltimoPaso ? 'none' : 'block';
-    dibujarPaso(paso, puntoInicio);
-    if (autoCentrar) {
-        const bounds = L.latLngBounds([puntoInicio.geometry.coordinates.slice().reverse()]);
-        if (paso.tipo === 'caminar') {
-            bounds.extend(paso.paradero.geometry.coordinates.slice().reverse());
-        } else if (paso.tipo === 'bus') {
-            bounds.extend(L.geoJSON(paso.ruta).getBounds());
-        } else if (paso.tipo === 'transbordo' || paso.tipo === 'fin') {
-            bounds.extend(paso.paradero.geometry.coordinates.slice().reverse());
-        }
-        if (bounds.isValid()) {
-            map.fitBounds(bounds.pad(0.2));
-        }
+    
+    // Pasar el puntoInicio actual para la ruta de caminata
+    const bounds = dibujarPaso(paso, puntoInicio); 
+    
+    if (autoCentrar && bounds && bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.2));
+    } else if (autoCentrar && !bounds) {
+        // Para pasos sin 'bounds' (ej. transbordo)
+        map.setView(map.getCenter(), 17);
     }
 }
-
 
 // --- 8. REGISTRO DEL SERVICE WORKER (PWA) ---
 if ('serviceWorker' in navigator) {
