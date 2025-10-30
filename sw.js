@@ -1,5 +1,5 @@
 // Nombre de nuestro caché
-const CACHE_NAME = 'rutas-koox-cache-v5';
+const CACHE_NAME = 'rutas-koox-cache-v6';
 const DATA_CACHE_NAME = 'rutas-koox-data-v1';
 const MAP_CACHE_NAME = 'rutas-koox-map-tiles-v1';
 
