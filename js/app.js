@@ -19,7 +19,6 @@ let puntoInicio = null;
 let paraderoInicioCercano = null;
 let paraderoFin = null;
 let choicesDestino = null;
-// let seleccionarPlan = null; // <--- LÍNEA ELIMINADA
 
 // --- 3. REFERENCIAS AL DOM (Solo declaradas) ---
 let selectDestino, inputInicio, instruccionesEl, btnIniciarRuta, btnLimpiar;
@@ -43,8 +42,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnFinalizar = document.getElementById('btnFinalizar');
     panelToggle = document.getElementById('panel-toggle');
     
-    // Conectamos los eventos
+    // =================================================================
+    // ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
+    // =================================================================
+    
+    // Conectamos TODOS los eventos principales aquí,
+    // después de que las variables del DOM han sido asignadas.
     panelToggle.addEventListener('click', togglePanel);
+    btnLimpiar.addEventListener('click', limpiarMapa);
+    btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
+    btnSiguiente.addEventListener('click', siguientePaso);
+    btnAnterior.addEventListener('click', pasoAnterior);
+    btnFinalizar.addEventListener('click', finalizarRuta);
+
+    // =================================================================
+    // ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
+    // =================================================================
+    
     panelControl.classList.add('oculto'); 
     
     initMap(); 
@@ -89,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error("Error cargando o procesando los datos GeoJSON:", error);
     }
-});
+}); // <-- FIN DEL DOMCONTENTLOADED
 
 // --- 5. LÓGICA DE LA APP (EVENT HANDLERS) ---
 
@@ -143,12 +157,7 @@ function initChoicesSelect() {
     });
 }
 
-// Estos botones SÍ deben estar conectados aquí
-btnLimpiar.addEventListener('click', limpiarMapa);
-btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
-btnSiguiente.addEventListener('click', siguientePaso);
-btnAnterior.addEventListener('click', pasoAnterior);
-btnFinalizar.addEventListener('click', finalizarRuta);
+// (Las líneas de addEventListener que estaban aquí fueron movidas ARRIBA)
 
 function limpiarMapa() {
     dibujarPlan([]);
@@ -193,10 +202,6 @@ function togglePanel() {
 
 
 // --- 6. LÓGICA DE NAVEGACIÓN (UI) ---
-
-// =================================================================
-// ⬇️⬇️⬇️ INICIO DE LA SECCIÓN MODIFICADA ⬇️⬇️⬇️
-// =================================================================
 
 /**
  * Muestra las opciones de ruta en el panel, creando elementos del DOM
@@ -247,20 +252,17 @@ function mostrarPlanes(planes) {
         });
         opcionDiv.appendChild(listaOL);
         
-        // --- ¡AQUÍ ESTÁ LA MAGIA! ---
-        // 1. Creamos el botón como un elemento del DOM
+        // --- Solución del error anterior (esto está bien) ---
         const btnSeleccionar = document.createElement('button');
         btnSeleccionar.className = 'btn-seleccionar';
         btnSeleccionar.textContent = 'Seleccionar esta ruta';
         
-        // 2. Le asignamos el evento con addEventListener
-        // Esto funciona porque 'seleccionarPlan' está en el mismo ámbito de módulo
         btnSeleccionar.addEventListener('click', () => {
             seleccionarPlan(index);
         });
         
         opcionDiv.appendChild(btnSeleccionar);
-        // --- FIN DE LA MAGIA ---
+        // --- Fin de la solución ---
         
         fragment.appendChild(opcionDiv);
     });
@@ -275,7 +277,7 @@ function mostrarPlanes(planes) {
 
 /**
  * Esta función ahora es una constante local del módulo, 
- * no necesita estar en 'window'.
+ * y será leída sin problemas porque el script ya no se detiene.
  */
 const seleccionarPlan = (indice) => {
     rutaCompletaPlan = listaDePlanes[indice]; 
@@ -288,17 +290,12 @@ const seleccionarPlan = (indice) => {
     dibujarPlan([rutaCompletaPlan]);
 }
 
-// =================================================================
-// ⬆️⬆️⬆️ FIN DE LA SECCIÓN MODIFICADA ⬆️⬆️⬆️
-// =================================================================
-
 
 function encontrarParaderoMasCercano(punto) {
     return turf.nearestPoint(punto, paraderosCollection);
 }
 
 // --- 7. FUNCIONES DE NAVEGACIÓN (FASE 3.2) ---
-// (El resto de este archivo (iniciarRutaProgresiva, finalizarRuta, etc.) está perfecto y no cambia)
 function iniciarRutaProgresiva() {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
     console.log("Iniciando modo de navegación...");
