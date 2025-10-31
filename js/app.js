@@ -19,9 +19,9 @@ let puntoInicio = null;
 let paraderoInicioCercano = null;
 let paraderoFin = null;
 let choicesDestino = null;
-let seleccionarPlan = null;
+// let seleccionarPlan = null; // <--- LÍNEA ELIMINADA
+
 // --- 3. REFERENCIAS AL DOM (Solo declaradas) ---
-// ¡Las asignaremos una vez que el DOM esté listo!
 let selectDestino, inputInicio, instruccionesEl, btnIniciarRuta, btnLimpiar;
 let panelControl, panelNavegacion, instruccionActualEl, btnAnterior, btnSiguiente, btnFinalizar, panelToggle;
 
@@ -29,7 +29,6 @@ let panelControl, panelNavegacion, instruccionActualEl, btnAnterior, btnSiguient
 // --- 4. ARRANQUE DE LA APP ---
 document.addEventListener('DOMContentLoaded', async () => {
     
-    // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
     // Asignamos todas las referencias al DOM aquí
     selectDestino = document.getElementById('selectDestino');
     inputInicio = document.getElementById('inputInicio');
@@ -44,11 +43,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnFinalizar = document.getElementById('btnFinalizar');
     panelToggle = document.getElementById('panel-toggle');
     
-    // Y AHORA conectamos los eventos
+    // Conectamos los eventos
     panelToggle.addEventListener('click', togglePanel);
-    panelControl.classList.add('oculto'); // Ocultar panel al inicio
-    // --- FIN CORRECCIÓN ---
-
+    panelControl.classList.add('oculto'); 
+    
     initMap(); 
     
     try {
@@ -145,6 +143,7 @@ function initChoicesSelect() {
     });
 }
 
+// Estos botones SÍ deben estar conectados aquí
 btnLimpiar.addEventListener('click', limpiarMapa);
 btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
 btnSiguiente.addEventListener('click', siguientePaso);
@@ -229,7 +228,7 @@ function mostrarPlanes(planes) {
         });
         html += "</ol>";
         
-        window.seleccionarPlan = seleccionarPlan;
+        // window.seleccionarPlan = seleccionarPlan; // <--- LÍNEA ELIMINADA
         html += `<button class="btn-seleccionar" onclick="seleccionarPlan(${index})">Seleccionar esta ruta</button>`;
         html += `</div>`;
     });
@@ -240,6 +239,7 @@ function mostrarPlanes(planes) {
     btnIniciarRuta.style.display = 'none'; 
 }
 
+// Esta es la definición correcta de la función
 window.seleccionarPlan = (indice) => {
     rutaCompletaPlan = listaDePlanes[indice]; 
     
@@ -256,7 +256,7 @@ function encontrarParaderoMasCercano(punto) {
 }
 
 // --- 7. FUNCIONES DE NAVEGACIÓN (FASE 3.2) ---
-
+// (El resto de este archivo (iniciarRutaProgresiva, finalizarRuta, etc.) está perfecto y no cambia)
 function iniciarRutaProgresiva() {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
     console.log("Iniciando modo de navegación...");
@@ -352,7 +352,6 @@ function mostrarPaso(indice) {
     btnFinalizar.style.display = esUltimoPaso ? 'block' : 'none';
     btnSiguiente.style.display = esUltimoPaso ? 'none' : 'block';
     
-    // Pasar el puntoInicio actual para la ruta de caminata
     const bounds = dibujarPaso(paso, puntoInicio); 
     
     if (autoCentrar && bounds && bounds.isValid()) {
@@ -366,7 +365,7 @@ function mostrarPaso(indice) {
 // --- 8. REGISTRO DEL SERVICE WORKER (PWA) ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/sw.js') // Asegúrate que este nombre sea 'sw-vX.js' si lo cambiaste
       .then((reg) => {
         console.log('Service Worker: Registrado exitosamente', reg.scope);
       })
