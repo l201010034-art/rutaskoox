@@ -19,44 +19,95 @@
     <div id="panel-control" class="oculto">
         <div class="panel-header">
             <h3>Guía de Rutas Koox</h3>
+            <button id="btnInfo" class="info-btn">i</button>
         </div>
         
-        <div id="controles-viaje">
-            <div class="control-grupo">
-                <label for="inputInicio">Inicio:</label>
-                <input type="text" id="inputInicio" value="Detectando tu ubicación..." readonly>
-            </div>
-            
-            <div class="control-grupo">
-                <label for="selectDestino">Destino:</label>
-                <select id="selectDestino">
-                    <option value="">Escribe o selecciona un destino...</option>
-                </select>
-            </div>
+        <div class="tab-switch">
+            <button id="btnModoViaje" class="tab-btn activo">Calcular Viaje</button>
+            <button id="btnModoExplorar" class="tab-btn">Explorar Rutas</button>
         </div>
 
-        <div id="panel-instrucciones">
-            <p id="instrucciones">Selecciona tu destino para ver la ruta.</p>
+        <div id="panel-viaje"> 
+            <div id="controles-viaje">
+                <div class="control-grupo">
+                    <label for="inputInicio">Inicio:</label>
+                    <input type="text" id="inputInicio" value="Detectando tu ubicación..." readonly>
+                </div>
+                <div class="control-grupo">
+                    <label for="selectDestino">Destino:</label>
+                    <select id="selectDestino">
+                        <option value="">Escribe o selecciona un destino...</option>
+                    </select>
+                </div>
+            </div>
+            <div id="panel-instrucciones">
+                <p id="instrucciones">Selecciona tu destino para ver la ruta.</p>
+            </div>
+            <button id="btnIniciarRuta" style="display:none;">Iniciar Ruta</button>
+            <button id="btnLimpiar" style="display:none;">Nueva Búsqueda</button>
         </div>
-        
-        <button id="btnIniciarRuta" style="display:none;">Iniciar Ruta</button>
-        <button id="btnLimpiar" style="display:none;">Nueva Búsqueda</button>
-    </div>
 
-    <div id="panel-toggle">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18h16v-2H4v2zM4 13h16v-2H4v2zM4 6v2h16V6H4z"/></svg>
+        <div id="panel-explorar" class="oculto">
+            <div id="controles-explorar">
+                <div class="control-grupo">
+                    <label for="selectRuta">Selecciona una Ruta:</label>
+                    <select id="selectRuta">
+                        <option value="">Escribe o selecciona una ruta...</option>
+                    </select>
+                </div>
+            </div>
+            <div id="panel-instrucciones-explorar">
+                <p id="instrucciones-explorar">Selecciona una ruta para ver su trayecto y paraderos.</p>
+            </div>
+            <button id="btnLimpiarExplorar">Limpiar Mapa</button>
+        </div>
     </div>
 
     <div id="panel-navegacion" class="oculto">
-        <div id="instruccion-actual"></div>
+        <div id="instruccion-actual">Cargando instrucción...</div>
+        
+        <div id="nav-estado">
+            <strong id="distancia-restante">Faltan: ...</strong>
+            <strong id="tiempo-viaje" style="font-size: 0.9em;">Viaje: 0:00</strong>
+            <strong id="tiempo-espera" style="color: #dc3545;">Esperando: 0:00</strong>
+        </div>
+
         <div id="controles-nav">
             <button id="btnAnterior" disabled>Anterior</button>
             <button id="btnSiguiente">Siguiente</button>
-            <button id="btnFinalizar">Finalizar</button>
+            <button id="btnFinalizar" style="display: none;">Finalizar</button>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <div id="panel-toggle">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </div>
+
+    <div id="info-modal" class="modal-overlay oculto">
+        <div class="modal-content">
+            <span id="btnCloseModal" class="modal-close">&times;</span>
+            <h4>Información de Tarifas y Servicio</h4>
+            <div class="info-seccion">
+                <h5>Tarifas Oficiales</h5>
+                <p><strong>Pasaje General:</strong> $12.00 MXN</p>
+                <p><strong>Tarifa Social (Estudiantes/INAPAM):</strong> $6.00 MXN</p>
+            </div>
+            <div class="info-seccion">
+                <h5>Transbordos</h5>
+                <p>Tu primer y segundo transbordo tienen costo.</p>
+                <p><strong>¡Tu 3er transbordo es GRATIS!</strong></p>
+                <p><strong>Importante:</strong> Para que el transbordo gratuito sea válido, debe realizarse dentro de un periodo de **2 horas** desde el inicio de tu primer viaje.</p>
+            </div>
+            <div class="info-seccion">
+                <h5>Horarios (Aproximados)</h5>
+                <p>El servicio de rutas opera generalmente de:</p>
+                <p><strong>Lunes a Viernes:</strong> 5:00 AM - 11:00 PM</p>
+                <p><strong>Sabados y Domingos:</strong> 5:00 AM - 10:00 PM</p>
+
+                <p><small>Los horarios pueden variar por ruta y día festivo.</small></p>
+            </div>
+        </div>
+    </div> <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src='https://unpkg.com/@turf/turf@6/turf.min.js'></script>
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script type="module" src="js/app.js"></script>

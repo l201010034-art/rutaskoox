@@ -77,7 +77,6 @@ export function limpiarCapasDeRuta() {
         capaRutaBus = null;
     }
     if (capaRutaCaminar) {
-        // Esto ahora maneja la polilínea
         if (map.hasLayer(capaRutaCaminar)) {
             map.removeLayer(capaRutaCaminar);
         }
@@ -85,14 +84,6 @@ export function limpiarCapasDeRuta() {
     }
 }
 
-// =================================================================
-// ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
-// =================================================================
-
-/**
- * Dibuja la línea recta punteada.
- * AHORA CORREGIDO para manejar coordenadas [lon, lat, alt]
- */
 export function dibujarPaso(paso, puntoInicio) {
     limpiarCapasDeRuta();
     
@@ -102,11 +93,9 @@ export function dibujarPaso(paso, puntoInicio) {
     let bounds;
     switch(paso.tipo) {
         case 'caminar':
-            // CORREGIDO: Extraer [1] y [0] explícitamente
             const finCoordsCaminar = paso.paradero.geometry.coordinates;
             const finLatLng = [finCoordsCaminar[1], finCoordsCaminar[0]]; // [lat, lon]
             
-            // Dibujar una línea recta punteada (confiable)
             capaRutaCaminar = L.polyline([inicioLatLng, finLatLng], {
                 color: 'blue',
                 weight: 5,
@@ -123,7 +112,6 @@ export function dibujarPaso(paso, puntoInicio) {
                 style: { color: "#FF0000", weight: 5, opacity: 0.8 }
             }).addTo(map);
             
-            // CORREGIDO: Extraer [1] y [0] explícitamente
             const pInicioCoords = paso.paraderoInicio.geometry.coordinates;
             const pFinCoords = paso.paraderoFin.geometry.coordinates;
             const pInicio = [pInicioCoords[1], pInicioCoords[0]];
@@ -135,7 +123,6 @@ export function dibujarPaso(paso, puntoInicio) {
             break;
         
         case 'transbordo':
-            // CORREGIDO: Extraer [1l] y [0] explícitamente
             const pTransbordoCoords = paso.paradero.geometry.coordinates;
             const pTransbordo = [pTransbordoCoords[1], pTransbordoCoords[0]];
 
@@ -146,7 +133,6 @@ export function dibujarPaso(paso, puntoInicio) {
             break;
 
         case 'fin':
-            // CORREGIDO: Extraer [1] y [0] explícitamente
             const pDestinoCoords = paso.paradero.geometry.coordinates;
             const pDestino = [pDestinoCoords[1], pDestinoCoords[0]];
 
@@ -156,10 +142,42 @@ export function dibujarPaso(paso, puntoInicio) {
             map.setView(pDestino, 17);
             break;
     }
-
-    // Devolvemos los límites para que app.js haga el zoom
     return bounds;
 }
-// =================================================================
-// ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
-// =================================================================
+
+/**
+ * Dibuja una SOLA ruta (para el modo Explorar) y todos sus paraderos.
+ * @param {object} ruta - El feature GeoJSON de la ruta (LineString).
+ * @param {Array} paraderos - Un array de features GeoJSON de paraderos (Points).
+ */
+export function dibujarRutaExplorar(ruta, paraderos) {
+    limpiarCapasDeRuta();
+    if (!ruta) return;
+
+    // 1. Dibujar la línea de la ruta
+    capaRutaBus = L.geoJSON(ruta, {
+        style: { color: "#FF0000", weight: 6, opacity: 0.8 }
+    }).addTo(map);
+
+    // 2. Dibujar los marcadores de los paraderos
+    const paraderosFeatures = paraderos.map(p => {
+        const coords = p.geometry.coordinates;
+        const latLng = [coords[1], coords[0]]; // Corregido para [lat, lon]
+        return L.marker(latLng, {
+            icon: L.divIcon({
+                className: 'paradero-marker',
+                html: '<div style="background-color: #fff; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #555;"></div>',
+                iconSize: [14, 14]
+            })
+        }).bindPopup(p.properties.nombre || p.properties.Name); // Aseguramos compatibilidad
+    });
+    
+    // Añadirlos a la capa de marcadores
+    paraderosFeatures.forEach(marker => marker.addTo(marcadores));
+
+    // 3. Hacer zoom para que quepa todo
+    const group = L.featureGroup([capaRutaBus, ...paraderosFeatures]);
+    if (group.getBounds().isValid()) {
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+}

@@ -14,52 +14,37 @@ body, html {
     z-index: 1; /* Capa base */
 }
 
-/* =================================================================
-   ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
-   ================================================================= */
-
 /* Panel de control flotante */
 #panel-control {
     position: absolute;
     top: 10px;
     left: 10px;
-    
-    /* 1. Ajustamos el ancho: 320px para contenido + 50px de padding */
     width: 370px; 
-    max-width: calc(100% - 20px); /* Ajustado para móviles */
-    
-    /* 2. Añadimos padding izquierdo para el botón (40px) + 10px de espacio */
-    padding-left: 50px;
-    
-    /* 3. Nos aseguramos de que el padding se incluya en el ancho total */
+    max-width: calc(100% - 20px);
     box-sizing: border-box; 
-    
-    max-height: 95%;
+    max-height: 95%; /* Altura máxima */
     background-color: white;
-    z-index: 1000; /* Capa intermedia (detrás del botón) */
+    z-index: 1000;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    display: flex;
-    flex-direction: column;
+    display: flex; /* <-- Flex para sus hijos (header, tabs, paneles) */
+    flex-direction: column; /* <-- Apila a sus hijos */
     transition: transform 0.3s ease-in-out;
+    padding-left: 0;
 }
 
 #panel-control.oculto {
-    /* 4. Ajustamos el transform para ocultar el nuevo ancho (370px) */
-    transform: translateX(-400px); /* Lo saca de la pantalla */
+    transform: translateX(-400px);
 }
 
 .panel-header {
-    padding: 10px 15px;
+    padding: 10px 15px 10px 50px;
     border-bottom: 1px solid #eee;
+    position: relative;
+    flex-shrink: 0; /* <-- No encoger */
 }
 .panel-header h3 { margin: 0; }
 
-#controles-viaje { 
-    padding: 15px; 
-    overflow: visible;
-}
-/* ... (El resto de .panel-header y .control-grupo no cambia) ... */
 .control-grupo { 
     margin-bottom: 10px; 
     position: relative;
@@ -85,9 +70,10 @@ body, html {
 }
 
 #panel-instrucciones {
-    padding: 0 15px 15px 15px;
-    overflow-y: auto; 
+    padding: 15px; /* <-- Padding uniforme */
+    overflow-y: auto; /* <-- SCROLL aquí */
     border-top: 1px solid #eee;
+    flex-grow: 1; /* <-- Ocupa el espacio restante */
 }
 #panel-instrucciones p { margin-top: 0; }
 
@@ -103,45 +89,45 @@ body, html {
     border: none;
     border-radius: 4px;
     cursor: pointer;
+    flex-shrink: 0; /* <-- No encoger */
 }
 #btnIniciarRuta { background-color: #007bff; }
 #btnLimpiar { background-color: #6c757d; }
 #btnIniciarRuta:hover { background-color: #0056b3; }
 #btnLimpiar:hover { background-color: #5a6268; }
 
-/* Panel de Navegación */
+/* --- Panel de Navegación --- */
 #panel-navegacion {
     position: absolute;
     top: 10px;
     left: 10px;
-    
-    /* 5. Aplicamos los MISMOS cambios de ancho y padding aquí */
-    /* para consistencia visual al cambiar de panel. */
     width: 370px; 
     max-width: calc(100% - 20px); 
     padding-left: 50px;
     box-sizing: border-box;
-
     background: white;
-    z-index: 1001; /* Capa superior (misma que el toggle) */
+    z-index: 1001;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     display: flex;
     flex-direction: column;
-    padding-top: 15px;    /* Aseguramos los paddings originales */
+    padding-top: 15px;
     padding-right: 15px;
     padding-bottom: 15px;
 }
-/* =================================================================
-   ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
-   ================================================================= */
-
 
 #instruccion-actual {
     font-size: 1.2em;
     font-weight: bold;
     margin-bottom: 10px;
     word-wrap: break-word;
+}
+#nav-estado {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    padding: 10px 15px 10px 0;
+    border-top: 1px solid #eee;
 }
 #controles-nav {
     display: flex;
@@ -164,12 +150,12 @@ body, html {
     border-color: #dc3545;
 }
 
-/* El botón toggle (Esto estaba bien) */
+/* --- Botón Toggle --- */
 #panel-toggle {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 1001; /* ¡Capa superior! (Encima del panel-control) */
+    z-index: 1001;
     background-color: white;
     border-radius: 50%;
     width: 40px;
@@ -193,8 +179,7 @@ body, html {
     display: none;
 }
 
-
-/* Estilos de Opciones de Ruta */
+/* --- Estilos de Opciones de Ruta --- */
 .opcion-ruta {
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -218,5 +203,215 @@ body, html {
     background-color: #218838;
 }
 .oculto {
-    display: none !important; /* !important asegura que sobreescriba otros 'display' */
+    display: none !important;
+}
+
+/* --- Estilos para el Modo Explorar --- */
+.tab-switch {
+    display: flex;
+    background-color: #f0f0f0;
+    flex-shrink: 0; /* <-- No encoger */
+}
+.tab-btn {
+    flex-grow: 1;
+    padding: 12px 10px;
+    border: none;
+    background-color: transparent;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #555;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    border-bottom: 2px solid transparent; 
+}
+.tab-btn.activo {
+    background-color: #fff;
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+/* Paneles de modo */
+#panel-viaje, #panel-explorar {
+    padding-left: 50px;
+    flex-grow: 1; /* <-- Ocupa el espacio */
+    display: flex; /* <-- Flex para sus hijos */
+    flex-direction: column; /* <-- Apila a sus hijos */
+    min-height: 0; /* <-- AÑADE ESTA LÍNEA */
+}
+
+#panel-viaje.oculto, #panel-explorar.oculto {
+    display: none;
+}
+
+#controles-viaje, #controles-explorar {
+    padding: 15px 15px 0 15px;
+    overflow: visible;
+    flex-shrink: 0; /* <-- No encoger */
+}
+
+#panel-instrucciones-explorar {
+    padding: 15px;
+    overflow-y: auto; /* <-- SCROLL aquí */
+    border-top: 1px solid #eee;
+    flex-grow: 1; /* <-- Ocupa el espacio */
+}
+#panel-instrucciones-explorar p { 
+    margin-top: 0; 
+}
+
+#btnLimpiarExplorar {
+    display: block;
+    width: calc(100% - 30px);
+    margin: 0 15px 15px 15px;
+    padding: 12px;
+    font-size: 1em;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #6c757d;
+    flex-shrink: 0; /* <-- No encoger */
+}
+#btnLimpiarExplorar:hover { 
+    background-color: #5a6268; 
+}
+
+/* --- Estilos para el Panel de Información (Modal) --- */
+#btnInfo {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    width: 28px;
+    height: 28px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 50%;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #555;
+    cursor: pointer;
+    line-height: 24px;
+    text-align: center;
+    padding: 0;
+}
+#btnInfo:hover {
+    background-color: #e0e0e0;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    padding: 20px 30px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+    overflow-y: auto;
+}
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 2em;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close:hover {
+    color: #333;
+}
+.modal-content h4 {
+    margin-top: 0;
+    color: #007bff;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+.info-seccion {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #f4f4f4;
+    padding-bottom: 10px;
+}
+.info-seccion:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.info-seccion h5 {
+    margin-bottom: 8px;
+}
+.info-seccion p {
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+/* --- Estilos para el Timer de Navegación --- */
+#tiempo-viaje {
+    color: #333; /* Color normal */
+}
+#tiempo-viaje.advertencia {
+    color: #dc3545; /* Rojo de advertencia */
+    font-weight: bold;
+}
+
+
+/* =================================================================
+   ⬇️⬇️⬇️ INICIO: REGLAS CORREGIDAS PARA CHOICES.JS ⬇️⬇️⬇️
+   ================================================================= */
+
+/* 1. ANULA la alineación central de la biblioteca Choices.js */
+
+/* Para la lista desplegable (dropdown) */
+.choices__item--choice {
+    flex-direction: column !important;     /* Apila el texto */
+    align-items: flex-start !important;  /* Alinea a la izquierda */
+    padding-top: 8px !important;         /* Añade espacio vertical */
+    padding-bottom: 8px !important;
+}
+
+/* Para el ítem ya seleccionado (en la caja) */
+.choices__item[data-item] {
+    flex-direction: column !important;     /* Apila el texto */
+    align-items: flex-start !important;  /* Alinea a la izquierda */
+    padding-top: 4px !important;         /* Menos espacio, es más compacto */
+    padding-bottom: 4px !important;
+}
+
+/* 2. DA ESTILO al texto (span) y subtexto (small) */
+/* Usamos selectores más específicos para asegurar que ganen */
+        
+/* Texto principal (Nombre del paradero) */
+.choices__item span,
+.choices__item--choice span {
+    display: block; 
+    font-weight: bold;
+    font-size: 1em; 
+    color: #333;
+    line-height: 1.4; /* Altura de línea normal */
+}
+
+/* Subtexto (Calle o Colonia) */
+.choices__item small,
+.choices__item--choice small {
+    display: block; 
+    font-size: 0.85em; 
+    color: #555;      
+    font-weight: normal; 
+    line-height: 1.3; /* Altura de línea normal */
+    opacity: 0.9;
 }

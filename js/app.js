@@ -1,8 +1,11 @@
 // js/app.js
 
-import { initMap, crearMarcadorUsuario, dibujarPlan, dibujarPaso, marcadores, map } from './mapService.js';
+// 1. IMPORTACIÓN CORREGIDA
+import { initMap, crearMarcadorUsuario, dibujarPlan, dibujarPaso, marcadores, map, dibujarRutaExplorar, limpiarCapasDeRuta } from './mapService.js';
 import { getUbicacionUsuario, iniciarWatchLocation, detenerWatchLocation } from './locationService.js';
 import { encontrarRutaCompleta, crearMapaRutas, linkParaderosARutas } from './routeFinder.js';
+import { startNavigation, stopNavigation, updatePosition } from './navigationService.js';
+
 
 // --- 2. VARIABLES GLOBALES DE ESTADO ---
 let todosLosParaderos = [];
@@ -19,11 +22,16 @@ let puntoInicio = null;
 let paraderoInicioCercano = null;
 let paraderoFin = null;
 let choicesDestino = null;
+let distanciaTotalRuta = 0;
+let distanciaRestanteEl, tiempoEsperaEl, tiempoViajeEl;
+let choicesRuta = null;
 
 // --- 3. REFERENCIAS AL DOM (Solo declaradas) ---
 let selectDestino, inputInicio, instruccionesEl, btnIniciarRuta, btnLimpiar;
 let panelControl, panelNavegacion, instruccionActualEl, btnAnterior, btnSiguiente, btnFinalizar, panelToggle;
-
+let btnModoViaje, btnModoExplorar, panelViaje, panelExplorar;
+let selectRuta, instruccionesExplorarEl, btnLimpiarExplorar;
+let btnInfo, infoModal, btnCloseModal;
 
 // --- 4. ARRANQUE DE LA APP ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -41,27 +49,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnSiguiente = document.getElementById('btnSiguiente');
     btnFinalizar = document.getElementById('btnFinalizar');
     panelToggle = document.getElementById('panel-toggle');
+    distanciaRestanteEl = document.getElementById('distancia-restante');
+    tiempoEsperaEl = document.getElementById('tiempo-espera');
+    btnModoViaje = document.getElementById('btnModoViaje');
+    btnModoExplorar = document.getElementById('btnModoExplorar');
+    panelViaje = document.getElementById('panel-viaje');
+    panelExplorar = document.getElementById('panel-explorar');
+    selectRuta = document.getElementById('selectRuta');
+    instruccionesExplorarEl = document.getElementById('instrucciones-explorar');
+    btnLimpiarExplorar = document.getElementById('btnLimpiarExplorar');
+    btnInfo = document.getElementById('btnInfo');
+    infoModal = document.getElementById('info-modal');
+    btnCloseModal = document.getElementById('btnCloseModal');
+    tiempoViajeEl = document.getElementById('tiempo-viaje');
     
-    // =================================================================
-    // ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
-    // =================================================================
-    
-    // Conectamos TODOS los eventos principales aquí,
-    // después de que las variables del DOM han sido asignadas.
+    // Conectamos TODOS los eventos principales aquí
     panelToggle.addEventListener('click', togglePanel);
     btnLimpiar.addEventListener('click', limpiarMapa);
     btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
     btnSiguiente.addEventListener('click', siguientePaso);
     btnAnterior.addEventListener('click', pasoAnterior);
     btnFinalizar.addEventListener('click', finalizarRuta);
-    
-
-    // =================================================================
-    // ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
-    // =================================================================
+    btnModoViaje.addEventListener('click', () => cambiarModo('viaje'));
+    btnModoExplorar.addEventListener('click', () => cambiarModo('explorar'));
+    btnLimpiarExplorar.addEventListener('click', limpiarMapa);
+    btnInfo.addEventListener('click', () => infoModal.classList.remove('oculto'));
+    btnCloseModal.addEventListener('click', () => infoModal.classList.add('oculto'));
+    infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) {
+            infoModal.classList.add('oculto');
+        }
+    });
     
     panelControl.classList.add('oculto'); 
-    panelNavegacion.classList.add('oculto'); // <-- Añade esta línea
+    panelNavegacion.classList.add('oculto');
     
     initMap(); 
     
@@ -73,11 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dataParaderos = await resParaderos.json();
         const dataRutas = await resRutas.json();
         
-// js/app.js (NUEVO CÓDIGO)
-
-        // 1. Asignamos el índice original y filtramos paraderos con geometrías inválidas
         todosLosParaderos = dataParaderos.features.map((feature, index) => {
-            // Asignamos el índice original primero
             feature.properties.originalIndex = index;
             return feature;
         }).filter(feature => {
@@ -92,10 +109,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return true;
         });
 
-        // 2. Ahora que solo tenemos paraderos válidos, asignamos nombres y ordenamos
         todosLosParaderos.forEach(feature => {
             const props = feature.properties;
-            feature.properties.nombre = props.name || props.Name || props.Paradero || "Paradero sin nombre";
+            // Asegura que 'nombre' exista, usando los campos de QGIS o los originales
+            feature.properties.nombre = props.nombre || props.Name || props.Paradero || props.NOMVIAL || "Paradero sin nombre";
         });
 
         todosLosParaderos.sort((a, b) => a.properties.nombre.localeCompare(b.properties.nombre));
@@ -117,6 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         paraderosCollection = turf.featureCollection(todosLosParaderos);
         
         initChoicesSelect();
+        initChoicesSelectRuta();
         
         getUbicacionUsuario(handleInitialLocation, handleLocationError);
 
@@ -127,21 +145,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // --- 5. LÓGICA DE LA APP (EVENT HANDLERS) ---
 
-// js/app.js (Función MODIFICADA)
-
 function handleInitialLocation(pos) {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
     
-    // --- NUEVA VALIDACIÓN ---
-    // Si el GPS falla y reporta (0,0), trátalo como un error.
     if (lat === 0 && lon === 0) {
         console.error("Posición GPS inválida (0,0) detectada.");
         handleLocationError({ code: 0, message: "Posición GPS inválida (0,0)" });
         inputInicio.value = "Error de GPS (0,0)";
         return;
     }
-    // --- FIN DE VALIDACIÓN ---
 
     puntoInicio = turf.point([lon, lat]);
     paraderoInicioCercano = encontrarParaderoMasCercano(puntoInicio);
@@ -159,18 +172,53 @@ function handleLocationError(err) {
     inputInicio.value = "No se pudo obtener ubicación";
 }
 
+
 function initChoicesSelect() {
-    const choicesData = todosLosParaderos.map(paradero => ({
-        value: paradero.properties.originalIndex,
-        label: paradero.properties.nombre,
-    }));
+    
+    const choicesData = todosLosParaderos.map(paradero => {
+        const props = paradero.properties;
+        const nombreCalle = props.NOMVIAL || props.calle_cercana || "";
+        const nombreColonia = props.NOM_COL || props.colonia_cercana || "";
+
+        return {
+            value: props.originalIndex,
+            label: props.nombre,
+            customProperties: { 
+                calle: nombreCalle,
+                colonia: nombreColonia
+            }
+        };
+    });
 
     choicesDestino = new Choices(selectDestino, {
         choices: choicesData,
         itemSelectText: 'Seleccionar',
-        searchPlaceholderValue: 'Escribe para filtrar...',
+        searchPlaceholderValue: 'Escribe paradero, calle o colonia...',
         shouldSort: false,
         removeItemButton: true,
+        searchFields: ['label', 'customProperties.calle', 'customProperties.colonia'],
+        
+        // 2. TEMPLATES LIMPIOS (Sin 'style')
+        callbackOnCreateTemplates: function(template) {
+            return {
+                item: ({ classNames }, data) => {
+                    return template(
+                        `<div class="${classNames.item} ${data.highlighted ? classNames.highlightedState : classNames.itemSelectable}" data-item data-value="${data.value}" ${data.active ? 'aria-selected="true"' : ''} ${data.disabled ? 'aria-disabled="true"' : ''}>
+                            <span>${data.label}</span>
+                            <small>${data.customProperties.calle || data.customProperties.colonia || ''}</small>
+                        </div>`
+                    );
+                },
+                choice: ({ classNames }, data) => {
+                    return template(
+                        `<div class="${classNames.item} ${classNames.itemChoice} ${data.disabled ? classNames.itemDisabled : classNames.itemSelectable}" data-select-text="${this.config.itemSelectText}" data-choice ${data.disabled ? 'data-choice-disabled aria-disabled="true"' : 'data-choice-selectable'}" data-id="${data.id}" data-value="${data.value}" ${data.groupId > 0 ? 'role="treeitem"' : 'role="option"'}>
+                            <span>${data.label}</span>
+                            <small>${data.customProperties.calle || data.customProperties.colonia || ''}</small>
+                        </div>`
+                    );
+                },
+            };
+        }
     });
 
     selectDestino.addEventListener('change', (event) => {
@@ -183,18 +231,70 @@ function initChoicesSelect() {
         const destinoIndex = event.detail.value;
         if (destinoIndex) {
             paraderoFin = todosLosParaderos.find(p => p.properties.originalIndex == destinoIndex);
-            
             listaDePlanes = encontrarRutaCompleta(paraderoInicioCercano, paraderoFin, todasLasRutas, mapRutaParaderos);
             mostrarPlanes(listaDePlanes);
         }
     });
 }
 
-// (Las líneas de addEventListener que estaban aquí fueron movidas ARRIBA)
+function cambiarModo(modo) {
+    if (modo === 'viaje') {
+        panelViaje.classList.remove('oculto');
+        panelExplorar.classList.add('oculto');
+        btnModoViaje.classList.add('activo');
+        btnModoExplorar.classList.remove('activo');
+        limpiarMapa();
+    } else {
+        panelViaje.classList.add('oculto');
+        panelExplorar.classList.remove('oculto');
+        btnModoViaje.classList.remove('activo');
+        btnModoExplorar.classList.add('activo');
+        limpiarMapa();
+    }
+}
+
+function initChoicesSelectRuta() {
+    todasLasRutas.sort((a, b) => a.properties.id.localeCompare(b.properties.id, undefined, {numeric: true}));
+
+    const choicesData = todasLasRutas.map(ruta => ({
+        value: ruta.properties.id,
+        label: `${ruta.properties.id} (${ruta.properties.nombre})`,
+    }));
+
+    choicesRuta = new Choices(selectRuta, {
+        choices: choicesData,
+        itemSelectText: 'Seleccionar',
+        searchPlaceholderValue: 'Escribe para filtrar...',
+        shouldSort: false,
+    });
+
+    selectRuta.addEventListener('change', (event) => {
+        if (event.detail.value) {
+            handleExplorarRuta(event.detail.value);
+        }
+    });
+}
+
+function handleExplorarRuta(rutaId) {
+    const ruta = todasLasRutas.find(r => r.properties.id === rutaId);
+    if (!ruta) return;
+
+    const paraderosSet = mapRutaParaderos.get(rutaId);
+    const paraderosArray = paraderosSet ? [...paraderosSet] : [];
+
+    dibujarRutaExplorar(ruta, paraderosArray);
+
+    instruccionesExplorarEl.innerHTML = `
+        <p>Mostrando <strong>${ruta.properties.id}</strong>.</p>
+        <p>Esta ruta tiene aproximadamente <strong>${paraderosArray.length}</strong> paraderos.</p>
+    `;
+}
 
 function limpiarMapa() {
     dibujarPlan([]);
-    marcadores.clearLayers();
+    limpiarCapasDeRuta(); // <-- AHORA FUNCIONA
+
+    // --- RESETEAR MODO VIAJE ---
     instruccionesEl.innerHTML = "Selecciona tu destino para ver la ruta.";
     paraderoFin = null;
     rutaCompletaPlan = [];
@@ -202,11 +302,6 @@ function limpiarMapa() {
     pasoActual = 0;
     
     if (choicesDestino) {
-        choicesDestino.clearStore();
-        choicesDestino.setChoices(todosLosParaderos.map(p => ({
-            value: p.properties.originalIndex,
-            label: p.properties.nombre
-        })), 'value', 'label', true);
         choicesDestino.clearInput();
         choicesDestino.removeActiveItems();
     }
@@ -214,10 +309,19 @@ function limpiarMapa() {
     btnIniciarRuta.style.display = 'none';
     btnLimpiar.style.display = 'none';
     
+    // --- RESETEAR MODO EXPLORAR ---
+    instruccionesExplorarEl.innerHTML = "Selecciona una ruta para ver su trayecto y paraderos.";
+    if (choicesRuta) {
+        choicesRuta.clearInput();
+        choicesRuta.removeActiveItems();
+    }
+    
+    // --- RESETEAR NAVEGACIÓN ---
     panelNavegacion.classList.add('oculto');
-    panelControl.classList.add('oculto'); 
+    stopNavigation();
     detenerWatchLocation(watchId);
     
+    // --- RESETEAR UBICACIÓN ---
     if (puntoInicio) {
         const coords = puntoInicio.geometry.coordinates;
         map.setView([coords[1], coords[0]], 16);
@@ -226,21 +330,12 @@ function limpiarMapa() {
 }
 
 
-/**
- * Muestra u oculta el panel de búsqueda o navegación,
- * dependiendo del contexto.
- */
 function togglePanel() {
-    // Verificamos si el panel de navegación está activo (es decir, NO tiene la clase 'oculto')
     const enNavegacion = !panelNavegacion.classList.contains('oculto');
 
     if (enNavegacion) {
-        // Si estamos navegando, el toggle debe ocultar/mostrar
-        // el panel de NAVEGACIÓN (el de los pasos).
         panelNavegacion.classList.toggle('oculto');
     } else {
-        // Si NO estamos navegando, el toggle debe
-        // ocultar/mostrar el panel de BÚSQUEDA.
         panelControl.classList.toggle('oculto');
     }
 }
@@ -248,12 +343,8 @@ function togglePanel() {
 
 // --- 6. LÓGICA DE NAVEGACIÓN (UI) ---
 
-/**
- * Muestra las opciones de ruta en el panel, creando elementos del DOM
- * y asignando listeners de forma segura.
- */
 function mostrarPlanes(planes) {
-    instruccionesEl.innerHTML = ''; // Limpiar contenido anterior
+    instruccionesEl.innerHTML = '';
     marcadores.clearLayers();
     
     const inicioCoords = puntoInicio.geometry.coordinates;
@@ -271,9 +362,7 @@ function mostrarPlanes(planes) {
         return;
     }
 
-    // Usar un DocumentFragment para construir el HTML de forma eficiente
     const fragment = document.createDocumentFragment();
-
     const header = document.createElement('p');
     header.innerHTML = `<strong>Se encontraron ${planes.length} opciones:</strong>`;
     fragment.appendChild(header);
@@ -291,13 +380,12 @@ function mostrarPlanes(planes) {
         plan.forEach(paso => {
             if (paso.tipo === 'caminar' || paso.tipo === 'bus') {
                 const li = document.createElement('li');
-                li.textContent = paso.texto; // Usar textContent es más seguro que innerHTML
+                li.textContent = paso.texto;
                 listaOL.appendChild(li);
             }
         });
         opcionDiv.appendChild(listaOL);
         
-        // --- Solución del error anterior (esto está bien) ---
         const btnSeleccionar = document.createElement('button');
         btnSeleccionar.className = 'btn-seleccionar';
         btnSeleccionar.textContent = 'Seleccionar esta ruta';
@@ -307,29 +395,44 @@ function mostrarPlanes(planes) {
         });
         
         opcionDiv.appendChild(btnSeleccionar);
-        // --- Fin de la solución ---
-        
         fragment.appendChild(opcionDiv);
     });
 
-    // Añadimos todo el contenido construido al panel de una sola vez
     instruccionesEl.appendChild(fragment);
-
     dibujarPlan(planes);
     btnLimpiar.style.display = 'block';
     btnIniciarRuta.style.display = 'none'; 
 }
 
-/**
- * Esta función ahora es una constante local del módulo, 
- * y será leída sin problemas porque el script ya no se detiene.
- */
 const seleccionarPlan = (indice) => {
-    rutaCompletaPlan = listaDePlanes[indice]; 
+    rutaCompletaPlan = listaDePlanes[indice];
+
+    distanciaTotalRuta = 0;
+    let puntoAnterior = puntoInicio;
+
+    rutaCompletaPlan.forEach(paso => {
+        try {
+            if (paso.tipo === 'caminar') {
+                distanciaTotalRuta += turf.distance(puntoAnterior, paso.paradero, { units: 'meters' });
+                puntoAnterior = paso.paradero;
+            } else if (paso.tipo === 'bus') {
+                const startOnLine = turf.nearestPointOnLine(paso.ruta, paso.paraderoInicio);
+                const endOnLine = turf.nearestPointOnLine(paso.ruta, paso.paraderoFin);
+                const segmentoDeRuta = turf.lineSlice(startOnLine, endOnLine, paso.ruta);
+                distanciaTotalRuta += turf.length(segmentoDeRuta, { units: 'meters' });
+                puntoAnterior = paso.paraderoFin;
+            }
+        } catch (e) {
+            console.error("Error calculando distancia del paso:", paso, e);
+        }
+    });
+
+    console.log(`Distancia total de la ruta: ${distanciaTotalRuta} metros`);
     
     instruccionesEl.innerHTML = `<p><strong>Ruta seleccionada. ¡Listo para navegar!</strong></p>`;
     const buses = rutaCompletaPlan.filter(p => p.tipo === 'bus').map(p => p.ruta.properties.id);
     instruccionesEl.innerHTML += `<p>${buses.join(' &rarr; ')}</p>`;
+    instruccionesEl.innerHTML += `<p><strong>Distancia total:</strong> ${(distanciaTotalRuta / 1000).toFixed(2)} km</p>`;
     
     btnIniciarRuta.style.display = 'block';
     dibujarPlan([rutaCompletaPlan]);
@@ -340,7 +443,7 @@ function encontrarParaderoMasCercano(punto) {
     return turf.nearestPoint(punto, paraderosCollection);
 }
 
-// --- 7. FUNCIONES DE NAVEGACIÓN (FASE 3.2) ---
+// --- 7. FUNCIONES DE NAVEGACIÓN ---
 function iniciarRutaProgresiva() {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
     console.log("Iniciando modo de navegación...");
@@ -348,7 +451,10 @@ function iniciarRutaProgresiva() {
     panelNavegacion.classList.remove('oculto');
     pasoActual = 0;
     alertaMostrada = false;
+
     crearMarcadorUsuario(puntoInicio.geometry.coordinates.slice().reverse());
+    startNavigation(puntoInicio); 
+
     watchId = iniciarWatchLocation(handleLocationUpdate, handleLocationError);
     map.on('dragstart', () => { autoCentrar = false; });
     mostrarPaso(pasoActual);
@@ -356,8 +462,9 @@ function iniciarRutaProgresiva() {
 
 function finalizarRuta() {
     console.log("Finalizando navegación.");
-    panelNavegacion.classList.add('oculto');
+    panelNavegacion.classList.add('oculto'); 
     panelControl.classList.remove('oculto');
+    stopNavigation(); 
     detenerWatchLocation(watchId);
     map.off('dragstart');
     limpiarMapa();
@@ -367,12 +474,17 @@ function handleLocationUpdate(pos) {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
     const latlng = [lat, lon];
-    
+
     puntoInicio = turf.point([lon, lat]);
     crearMarcadorUsuario(latlng);
 
     if (autoCentrar) {
         map.panTo(latlng);
+    }
+
+    const navState = updatePosition(puntoInicio);
+    if (navState) {
+        actualizarUI_Navegacion(navState);
     }
     checkProximidad(); 
 }
@@ -445,11 +557,46 @@ function mostrarPaso(indice) {
     }
 }
 
+function actualizarUI_Navegacion(navState) {
+
+    // 1. Actualizar distancia
+    const distanciaFaltante = Math.max(0, distanciaTotalRuta - navState.distanciaRecorrida);
+    if (distanciaFaltante > 1000) {
+        distanciaRestanteEl.textContent = `Faltan: ${(distanciaFaltante / 1000).toFixed(2)} km`;
+    } else {
+        distanciaRestanteEl.textContent = `Faltan: ${distanciaFaltante.toFixed(0)} m`;
+    }
+
+    // 2. Actualizar tiempo de espera
+    if (navState.enMovimiento) {
+        tiempoEsperaEl.textContent = "En movimiento";
+        tiempoEsperaEl.style.color = "#28a745"; // Verde
+    } else {
+        const minutos = Math.floor(navState.tiempoDetenido / 60);
+        const segundos = navState.tiempoDetenido % 60;
+        tiempoEsperaEl.textContent = `Esperando: ${minutos}:${segundos < 10 ? '0' : ''}${segundos}`;
+        tiempoEsperaEl.style.color = "#dc3545"; // Rojo
+    }
+    
+    // 3. Actualizar tiempo total de viaje
+    const LIMITE_TIEMPO = 7200; // 2 horas en segundos
+    const totalMinutos = Math.floor(navState.tiempoTotalViaje / 60);
+    const totalSegundos = navState.tiempoTotalViaje % 60;
+    
+    tiempoViajeEl.textContent = `Viaje: ${totalMinutos}:${totalSegundos < 10 ? '0' : ''}${totalSegundos}`;
+
+    if (navState.tiempoTotalViaje > LIMITE_TIEMPO) {
+        tiempoViajeEl.classList.add('advertencia');
+    } else {
+        tiempoViajeEl.classList.remove('advertencia');
+    }
+}
+
 
 // --- 8. REGISTRO DEL SERVICE WORKER (PWA) ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js') // Asegúrate que este nombre sea 'sw-vX.js' si lo cambiaste
+    navigator.serviceWorker.register('/sw.js')
       .then((reg) => {
         console.log('Service Worker: Registrado exitosamente', reg.scope);
       })
