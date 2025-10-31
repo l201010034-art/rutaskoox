@@ -14,13 +14,26 @@ body, html {
     z-index: 1; /* Capa base */
 }
 
+/* =================================================================
+   ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
+   ================================================================= */
+
 /* Panel de control flotante */
 #panel-control {
     position: absolute;
     top: 10px;
     left: 10px;
-    width: 320px;
-    max-width: calc(100% - 60px); /* Ancho máximo en móviles */
+    
+    /* 1. Ajustamos el ancho: 320px para contenido + 50px de padding */
+    width: 370px; 
+    max-width: calc(100% - 20px); /* Ajustado para móviles */
+    
+    /* 2. Añadimos padding izquierdo para el botón (40px) + 10px de espacio */
+    padding-left: 50px;
+    
+    /* 3. Nos aseguramos de que el padding se incluya en el ancho total */
+    box-sizing: border-box; 
+    
     max-height: 95%;
     background-color: white;
     z-index: 1000; /* Capa intermedia (detrás del botón) */
@@ -32,6 +45,7 @@ body, html {
 }
 
 #panel-control.oculto {
+    /* 4. Ajustamos el transform para ocultar el nuevo ancho (370px) */
     transform: translateX(-400px); /* Lo saca de la pantalla */
 }
 
@@ -45,7 +59,7 @@ body, html {
     padding: 15px; 
     overflow: visible;
 }
-
+/* ... (El resto de .panel-header y .control-grupo no cambia) ... */
 .control-grupo { 
     margin-bottom: 10px; 
     position: relative;
@@ -100,17 +114,28 @@ body, html {
     position: absolute;
     top: 10px;
     left: 10px;
-    width: 320px; 
+    
+    /* 5. Aplicamos los MISMOS cambios de ancho y padding aquí */
+    /* para consistencia visual al cambiar de panel. */
+    width: 370px; 
     max-width: calc(100% - 20px); 
+    padding-left: 50px;
+    box-sizing: border-box;
+
     background: white;
     z-index: 1001; /* Capa superior (misma que el toggle) */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     display: flex;
     flex-direction: column;
-    padding: 15px;
-    box-sizing: border-box;
+    padding-top: 15px;    /* Aseguramos los paddings originales */
+    padding-right: 15px;
+    padding-bottom: 15px;
 }
+/* =================================================================
+   ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
+   ================================================================= */
+
 
 #instruccion-actual {
     font-size: 1.2em;
@@ -139,10 +164,7 @@ body, html {
     border-color: #dc3545;
 }
 
-/* =================================================================
-   ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
-   ================================================================= */
-
+/* El botón toggle (Esto estaba bien) */
 #panel-toggle {
     position: absolute;
     top: 10px;
@@ -157,26 +179,19 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 1; /* ¡AHORA SIEMPRE VISIBLE! */
-    pointer-events: all; /* Siempre clicable */
-    transform: translateX(0); /* No se mueve */
+    opacity: 1; 
+    pointer-events: all; 
+    transform: translateX(0); 
 }
 #panel-toggle svg {
     width: 24px;
     height: 24px;
 }
 
-/* (Las reglas de opacidad que estaban aquí se eliminaron) */
-
 /* Oculta la burbuja si estamos en modo navegación */
-/* CORREGIDO: Ahora usa .oculto en lugar de [style*="display:none"] */
 #panel-navegacion:not(.oculto) ~ #panel-toggle {
     display: none;
 }
-
-/* =================================================================
-   ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
-   ================================================================= */
 
 
 /* Estilos de Opciones de Ruta */

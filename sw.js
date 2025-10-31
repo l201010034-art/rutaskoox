@@ -5,7 +5,7 @@
    ================================================================= */
 
 // !! IMPORTANTE !!
-// ¡Asegúrate de cambiar esto a 'v1.3' (o lo que siga) para
+// ¡Asegúrate de cambiar esto a 'v1.4' (o lo que siga) para
 // que esta actualización se aplique!
 const CACHE_VERSION = 'v1.4'; // <-- ¡INCREMENTA ESTO!
 const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`;
