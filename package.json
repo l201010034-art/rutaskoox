@@ -1,0 +1,26 @@
+{
+  "name": "copia-de-koox-rutas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:js": "terser js/app.js js/mapService.js js/routeFinder.js js/locationService.js js/navigationService.js -o js/app.min.js -c -m",
+    "build:css": "cssnano style.css > style.min.css",
+    "build": "npm run build:js && npm run build:css"
+ },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/l201010034-art/rutaskoox.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/l201010034-art/rutaskoox/issues"
+  },
+  "homepage": "https://github.com/l201010034-art/rutaskoox#readme",
+  "devDependencies": {
+    "terser": "^5.44.0"
+  }
+}

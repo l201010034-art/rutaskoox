@@ -1,0 +1,6 @@
+# Archivos generados localmente (Vercel los creará)
+js/app.min.js
+style.min.css
+
+# Dependencias de Node
+node_modules/

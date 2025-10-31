@@ -5,31 +5,37 @@
    ================================================================= */
 
 // !! IMPORTANTE !!
-// ¡Asegúrate de cambiar esto a 'v1.9' (o lo que siga) para
-// que esta actualización se aplique!
-const CACHE_VERSION = 'v1.17'; // <-- ¡INCREMENTA ESTO!
+// ¡Sube la versión cada vez que hagas un cambio!
+// Cambiémoslo de 'v1.15' a 'v1.16'
+const CACHE_VERSION = 'v1.18'; // <-- ¡INCREMENTADO!
 const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`;
+
+// ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
 
 // Estos son los archivos MÍNIMOS para que la app "funcione" sin conexión.
 const APP_SHELL_URLS = [
     '/',
     '/index.html',
-    '/style.css',
+    // '/style.css', <-- Ya no se usa
+    '/style.min.css', // <-- Se añade el minificado
     '/manifest.json',
     '/images/favicon.png',
     '/images/icon-512.png',
-    '/js/app.js',
-    '/js/mapService.js',
-    '/js/routeFinder.js',
-    '/js/locationService.js',
     
-    // =========================================================
-    // ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
-    // =========================================================
-    // ¡Añadimos los datos al "App Shell" para garantizar
-    // que el cálculo de rutas funcione 100% offline!
+    // '/js/app.js',  <-- Borramos los individuales
+    // '/js/mapService.js',
+    // '/js/routeFinder.js',
+    // '/js/locationService.js',
+    // '/js/navigationService.js', // (Este también estaba en tu repo)
+    
+    '/js/app.min.js', // <-- Se añade el minificado
+    
+    // Los datos para el cálculo offline (esto estaba perfecto)
     '/data/paraderos.geojson',
     '/data/rutas.geojson',
+
+    // Librerías de terceros que también queremos offline
+// ... (el resto del archivo sigue igual)
     // =========================================================
     // ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
     // =========================================================
