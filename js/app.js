@@ -71,11 +71,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dataParaderos = await resParaderos.json();
         const dataRutas = await resRutas.json();
         
-        todosLosParaderos = dataParaderos.features;
-        todosLosParaderos.forEach((feature, index) => {
+// js/app.js (NUEVO CÓDIGO)
+
+        // 1. Asignamos el índice original y filtramos paraderos con geometrías inválidas
+        todosLosParaderos = dataParaderos.features.map((feature, index) => {
+            // Asignamos el índice original primero
+            feature.properties.originalIndex = index;
+            return feature;
+        }).filter(feature => {
+            if (!feature || !feature.geometry || !feature.geometry.coordinates || 
+                feature.geometry.coordinates.length < 2 || 
+                typeof feature.geometry.coordinates[0] !== 'number' || 
+                typeof feature.geometry.coordinates[1] !== 'number') 
+            {
+                console.warn(`Paradero inválido/sin coordenadas en índice ${feature.properties.originalIndex} (${feature.properties.name}). Omitiendo.`);
+                return false;
+            }
+            return true;
+        });
+
+        // 2. Ahora que solo tenemos paraderos válidos, asignamos nombres y ordenamos
+        todosLosParaderos.forEach(feature => {
             const props = feature.properties;
             feature.properties.nombre = props.name || props.Name || props.Paradero || "Paradero sin nombre";
-            feature.properties.originalIndex = index;
         });
 
         todosLosParaderos.sort((a, b) => a.properties.nombre.localeCompare(b.properties.nombre));
@@ -107,9 +125,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // --- 5. LÓGICA DE LA APP (EVENT HANDLERS) ---
 
+// js/app.js (Función MODIFICADA)
+
 function handleInitialLocation(pos) {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
+    
+    // --- NUEVA VALIDACIÓN ---
+    // Si el GPS falla y reporta (0,0), trátalo como un error.
+    if (lat === 0 && lon === 0) {
+        console.error("Posición GPS inválida (0,0) detectada.");
+        handleLocationError({ code: 0, message: "Posición GPS inválida (0,0)" });
+        inputInicio.value = "Error de GPS (0,0)";
+        return;
+    }
+    // --- FIN DE VALIDACIÓN ---
+
     puntoInicio = turf.point([lon, lat]);
     paraderoInicioCercano = encontrarParaderoMasCercano(puntoInicio);
     
