@@ -29,7 +29,7 @@ export function encontrarRutaCompleta(inicio, fin, todasLasRutas, mapRutaParader
     let solucionesEncontradas = [];
     let minTramosEncontrado = Infinity;
     let combinacionesEncontradas = new Set();
-    const limiteTransbordos = 4; 
+    const limiteTransbordos = 5; 
 
     const caminoBase = [{ tipo: 'caminar', paradero: inicio, texto: `Camina a: ${inicio.properties.nombre}` }];
     visitados.set(inicio.properties.nombre, 0);

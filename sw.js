@@ -7,7 +7,7 @@
 // !! IMPORTANTE !!
 // ¡Asegúrate de cambiar esto a 'v1.4' (o lo que siga) para
 // que esta actualización se aplique!
-const CACHE_VERSION = 'v1.4'; // <-- ¡INCREMENTA ESTO!
+const CACHE_VERSION = 'v1.5'; // <-- ¡INCREMENTA ESTO!
 const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`;
 
 // Estos son los archivos MÍNIMOS para que la app "funcione" sin conexión.
