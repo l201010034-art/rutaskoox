@@ -54,12 +54,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnSiguiente.addEventListener('click', siguientePaso);
     btnAnterior.addEventListener('click', pasoAnterior);
     btnFinalizar.addEventListener('click', finalizarRuta);
+    
 
     // =================================================================
     // ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
     // =================================================================
     
     panelControl.classList.add('oculto'); 
+    panelNavegacion.classList.add('oculto'); // <-- Añade esta línea
     
     initMap(); 
     
@@ -212,9 +214,8 @@ function limpiarMapa() {
     btnIniciarRuta.style.display = 'none';
     btnLimpiar.style.display = 'none';
     
-    panelNavegacion.style.display = 'none';
-    panelControl.classList.add('oculto'); // Ocultar el panel
-    
+    panelNavegacion.classList.add('oculto');
+    panelControl.classList.add('oculto'); 
     detenerWatchLocation(watchId);
     
     if (puntoInicio) {
@@ -224,11 +225,24 @@ function limpiarMapa() {
     }
 }
 
+
 /**
- * Muestra u oculta el panel de búsqueda
+ * Muestra u oculta el panel de búsqueda o navegación,
+ * dependiendo del contexto.
  */
 function togglePanel() {
-    panelControl.classList.toggle('oculto');
+    // Verificamos si el panel de navegación está activo (es decir, NO tiene la clase 'oculto')
+    const enNavegacion = !panelNavegacion.classList.contains('oculto');
+
+    if (enNavegacion) {
+        // Si estamos navegando, el toggle debe ocultar/mostrar
+        // el panel de NAVEGACIÓN (el de los pasos).
+        panelNavegacion.classList.toggle('oculto');
+    } else {
+        // Si NO estamos navegando, el toggle debe
+        // ocultar/mostrar el panel de BÚSQUEDA.
+        panelControl.classList.toggle('oculto');
+    }
 }
 
 
@@ -331,7 +345,7 @@ function iniciarRutaProgresiva() {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
     console.log("Iniciando modo de navegación...");
     panelControl.classList.add('oculto'); 
-    panelNavegacion.style.display = 'flex';
+    panelNavegacion.classList.remove('oculto');
     pasoActual = 0;
     alertaMostrada = false;
     crearMarcadorUsuario(puntoInicio.geometry.coordinates.slice().reverse());
@@ -342,7 +356,7 @@ function iniciarRutaProgresiva() {
 
 function finalizarRuta() {
     console.log("Finalizando navegación.");
-    panelNavegacion.style.display = 'none'; 
+    panelNavegacion.classList.add('oculto');
     panelControl.classList.remove('oculto');
     detenerWatchLocation(watchId);
     map.off('dragstart');

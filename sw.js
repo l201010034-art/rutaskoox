@@ -5,13 +5,12 @@
    ================================================================= */
 
 // !! IMPORTANTE !!
-// Cambia este número (ej. 'v1.1', 'v1.2') CADA VEZ que subas
-// una nueva versión de tu app (un cambio en app.js, style.css, etc.)
-const CACHE_VERSION = 'v1.2'; // Empezamos con v1.2 (post-bugfix)
+// ¡Asegúrate de cambiar esto a 'v1.3' (o lo que siga) para
+// que esta actualización se aplique!
+const CACHE_VERSION = 'v1.3'; // <-- ¡INCREMENTA ESTO!
 const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`;
 
 // Estos son los archivos MÍNIMOS para que la app "funcione" sin conexión.
-// Es el "cascarón" de la aplicación.
 const APP_SHELL_URLS = [
     '/',
     '/index.html',
@@ -23,6 +22,18 @@ const APP_SHELL_URLS = [
     '/js/mapService.js',
     '/js/routeFinder.js',
     '/js/locationService.js',
+    
+    // =========================================================
+    // ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
+    // =========================================================
+    // ¡Añadimos los datos al "App Shell" para garantizar
+    // que el cálculo de rutas funcione 100% offline!
+    '/data/paraderos.geojson',
+    '/data/rutas.geojson',
+    // =========================================================
+    // ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
+    // =========================================================
+
     // Librerías de terceros que también queremos offline
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
@@ -30,9 +41,6 @@ const APP_SHELL_URLS = [
     'https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css',
     'https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js'
 ];
-
-// NOTA: No incluimos los 'data/paraderos.geojson' aquí.
-// Esos son DATOS, no el "cascarón", y usamos una estrategia diferente para ellos.
 
 
 /* =================================================================
@@ -52,7 +60,6 @@ self.addEventListener('install', (event) => {
             })
             .then(() => {
                 // ¡Forzamos al nuevo Service Worker a activarse de inmediato!
-                // No esperamos a que el usuario cierre todas las pestañas.
                 console.log('[SW] Instalación completa. Saltando espera (skipWaiting).');
                 self.skipWaiting();
             })
@@ -60,7 +67,6 @@ self.addEventListener('install', (event) => {
 });
 
 // Evento 'activate': Se dispara DESPUÉS de 'install'.
-// Es el momento perfecto para limpiar los cachés antiguos.
 self.addEventListener('activate', (event) => {
     console.log(`[SW] Activando versión: ${CACHE_VERSION}`);
     
@@ -69,8 +75,7 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
-                    // Si el nombre del caché NO es el actual (CACHE_NAME),
-                    // ¡significa que es un caché antiguo y lo borramos!
+                    // Si el nombre del caché NO es el actual, lo borramos.
                     if (cacheName !== CACHE_NAME) {
                         console.log(`[SW] Borrando caché antiguo: ${cacheName}`);
                         return caches.delete(cacheName);
@@ -91,7 +96,6 @@ self.addEventListener('activate', (event) => {
    ================================================================= */
 
 self.addEventListener('fetch', (event) => {
-    // Solo nos interesan las peticiones GET
     if (event.request.method !== 'GET') {
         return;
     }
@@ -99,7 +103,9 @@ self.addEventListener('fetch', (event) => {
     const requestUrl = new URL(event.request.url);
 
     // ESTRATEGIA 1: "Network First" (Red primero) para nuestros DATOS
-    // Queremos que los datos de rutas (geojson) siempre estén frescos si hay red.
+    // (Esto sigue siendo bueno, porque si el usuario TIENE internet,
+    // buscará actualizaciones de los geojson, pero si no tiene,
+    // ahora SÍ encontrará la versión del caché que instalamos.)
     if (requestUrl.pathname.startsWith('/data/')) {
         event.respondWith(
             caches.open(CACHE_NAME).then((cache) => {
@@ -116,25 +122,21 @@ self.addEventListener('fetch', (event) => {
                 });
             })
         );
-        return; // Salimos de la función aquí
+        return;
     }
 
     // ESTRATEGIA 2: "Cache First" (Caché primero) para todo lo demás
-    // (App Shell, Leaflet, Turf, fuentes, etc.)
-    // Esto es ideal para el rendimiento offline.
     event.respondWith(
         caches.match(event.request)
             .then((response) => {
-                // 1. Si está en caché, lo devolvemos (súper rápido)
+                // 1. Si está en caché, lo devolvemos
                 if (response) {
                     return response;
                 }
                 
                 // 2. Si no está en caché, vamos a la red
                 return fetch(event.request).then((networkResponse) => {
-                    // 3. Y guardamos la respuesta en caché para la próxima vez
-                    // (Esto es para cosas que no estaban en el App Shell, como
-                    // las imágenes/tiles del mapa de OpenStreetMap)
+                    // 3. Y guardamos la respuesta en caché
                     return caches.open(CACHE_NAME).then((cache) => {
                         console.log(`[SW] Cacheando nuevo recurso: ${event.request.url}`);
                         cache.put(event.request, networkResponse.clone());

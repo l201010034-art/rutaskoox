@@ -205,3 +205,6 @@ body, html {
 .opcion-ruta .btn-seleccionar:hover {
     background-color: #218838;
 }
+.oculto {
+    display: none !important; /* !important asegura que sobreescriba otros 'display' */
+}
