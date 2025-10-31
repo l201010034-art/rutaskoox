@@ -194,8 +194,16 @@ function togglePanel() {
 
 // --- 6. LÓGICA DE NAVEGACIÓN (UI) ---
 
+// =================================================================
+// ⬇️⬇️⬇️ INICIO DE LA SECCIÓN MODIFICADA ⬇️⬇️⬇️
+// =================================================================
+
+/**
+ * Muestra las opciones de ruta en el panel, creando elementos del DOM
+ * y asignando listeners de forma segura.
+ */
 function mostrarPlanes(planes) {
-    instruccionesEl.innerHTML = '';
+    instruccionesEl.innerHTML = ''; // Limpiar contenido anterior
     marcadores.clearLayers();
     
     const inicioCoords = puntoInicio.geometry.coordinates;
@@ -213,34 +221,63 @@ function mostrarPlanes(planes) {
         return;
     }
 
-    let html = `<p><strong>Se encontraron ${planes.length} opciones:</strong></p>`;
+    // Usar un DocumentFragment para construir el HTML de forma eficiente
+    const fragment = document.createDocumentFragment();
+
+    const header = document.createElement('p');
+    header.innerHTML = `<strong>Se encontraron ${planes.length} opciones:</strong>`;
+    fragment.appendChild(header);
     
     planes.forEach((plan, index) => {
-        html += `<div class="opcion-ruta">`;
-        const buses = plan.filter(p => p.tipo === 'bus').map(p => p.ruta.properties.id);
-        html += `<h4>Opción ${index + 1} <span style="font-weight:normal; font-size: 0.8em;">(${buses.join(' &rarr; ')})</span></h4>`;
+        const opcionDiv = document.createElement('div');
+        opcionDiv.className = 'opcion-ruta';
         
-        html += "<ol>";
+        const buses = plan.filter(p => p.tipo === 'bus').map(p => p.ruta.properties.id);
+        const opcionHeader = document.createElement('h4');
+        opcionHeader.innerHTML = `Opción ${index + 1} <span style="font-weight:normal; font-size: 0.8em;">(${buses.join(' &rarr; ')})</span>`;
+        opcionDiv.appendChild(opcionHeader);
+        
+        const listaOL = document.createElement('ol');
         plan.forEach(paso => {
             if (paso.tipo === 'caminar' || paso.tipo === 'bus') {
-                html += `<li>${paso.texto}</li>`;
+                const li = document.createElement('li');
+                li.textContent = paso.texto; // Usar textContent es más seguro que innerHTML
+                listaOL.appendChild(li);
             }
         });
-        html += "</ol>";
+        opcionDiv.appendChild(listaOL);
         
-        // window.seleccionarPlan = seleccionarPlan; // <--- LÍNEA ELIMINADA
-        html += `<button class="btn-seleccionar" onclick="seleccionarPlan(${index})">Seleccionar esta ruta</button>`;
-        html += `</div>`;
+        // --- ¡AQUÍ ESTÁ LA MAGIA! ---
+        // 1. Creamos el botón como un elemento del DOM
+        const btnSeleccionar = document.createElement('button');
+        btnSeleccionar.className = 'btn-seleccionar';
+        btnSeleccionar.textContent = 'Seleccionar esta ruta';
+        
+        // 2. Le asignamos el evento con addEventListener
+        // Esto funciona porque 'seleccionarPlan' está en el mismo ámbito de módulo
+        btnSeleccionar.addEventListener('click', () => {
+            seleccionarPlan(index);
+        });
+        
+        opcionDiv.appendChild(btnSeleccionar);
+        // --- FIN DE LA MAGIA ---
+        
+        fragment.appendChild(opcionDiv);
     });
 
-    instruccionesEl.innerHTML = html;
+    // Añadimos todo el contenido construido al panel de una sola vez
+    instruccionesEl.appendChild(fragment);
+
     dibujarPlan(planes);
     btnLimpiar.style.display = 'block';
     btnIniciarRuta.style.display = 'none'; 
 }
 
-// Esta es la definición correcta de la función
-window.seleccionarPlan = (indice) => {
+/**
+ * Esta función ahora es una constante local del módulo, 
+ * no necesita estar en 'window'.
+ */
+const seleccionarPlan = (indice) => {
     rutaCompletaPlan = listaDePlanes[indice]; 
     
     instruccionesEl.innerHTML = `<p><strong>Ruta seleccionada. ¡Listo para navegar!</strong></p>`;
@@ -250,6 +287,11 @@ window.seleccionarPlan = (indice) => {
     btnIniciarRuta.style.display = 'block';
     dibujarPlan([rutaCompletaPlan]);
 }
+
+// =================================================================
+// ⬆️⬆️⬆️ FIN DE LA SECCIÓN MODIFICADA ⬆️⬆️⬆️
+// =================================================================
+
 
 function encontrarParaderoMasCercano(punto) {
     return turf.nearestPoint(punto, paraderosCollection);
