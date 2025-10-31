@@ -19,7 +19,7 @@ let puntoInicio = null;
 let paraderoInicioCercano = null;
 let paraderoFin = null;
 let choicesDestino = null;
-
+let seleccionarPlan = null;
 // --- 3. REFERENCIAS AL DOM (Solo declaradas) ---
 // ¡Las asignaremos una vez que el DOM esté listo!
 let selectDestino, inputInicio, instruccionesEl, btnIniciarRuta, btnLimpiar;
