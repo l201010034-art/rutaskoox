@@ -29,7 +29,7 @@ export function encontrarRutaCompleta(inicio, fin, todasLasRutas, mapRutaParader
     let solucionesEncontradas = [];
     let minTramosEncontrado = Infinity;
     let combinacionesEncontradas = new Set();
-    const limiteTransbordos = 8; 
+    const limiteTransbordos = 4; 
 
     const caminoBase = [{ tipo: 'caminar', paradero: inicio, texto: `Camina a: ${inicio.properties.nombre}` }];
     visitados.set(inicio.properties.nombre, 0);
@@ -109,7 +109,7 @@ export function encontrarRutaCompleta(inicio, fin, todasLasRutas, mapRutaParader
  * Enlaza Paraderos a Rutas usando Turf.js
  */
 export function linkParaderosARutas(paraderos, rutas) {
-    const DISTANCIA_MAXIMA = 20;
+    const DISTANCIA_MAXIMA = 40;
     paraderos.forEach(paradero => {
         paradero.properties.rutas = []; 
         rutas.forEach(ruta => {
