@@ -7,7 +7,7 @@
 // !! IMPORTANTE !!
 // ¡Sube la versión cada vez que hagas un cambio!
 // Cambiémoslo de 'v1.15' a 'v1.16'
-const CACHE_VERSION = 'v1.18'; // <-- ¡INCREMENTADO!
+const CACHE_VERSION = 'v1.19'; // <-- ¡INCREMENTADO!
 const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`;
 
 // ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
