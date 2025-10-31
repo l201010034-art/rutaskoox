@@ -4,12 +4,12 @@
   "description": "App de rutas Koox Campeche",
   "private": true,
   "scripts": {
-    "build:js": "terser js/app.js js/mapService.js js/routeFinder.js js/locationService.js js/navigationService.js -o js/app.min.js -c -m",
+    "build:js": "terser js/app.js --module -o js/app.min.js -c -m",
     "build:css": "cssnano style.css > style.min.css",
     "build": "npm run build:js && npm run build:css"
   },
   "devDependencies": {
-    "cssnano-cli": "^1.0.5", 
+    "cssnano-cli": "^1.0.5",
     "terser": "^5.31.0"
   }
 }
