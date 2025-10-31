@@ -85,8 +85,13 @@ export function limpiarCapasDeRuta() {
     }
 }
 
+// =================================================================
+// ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
+// =================================================================
+
 /**
- * ¡REVERTIDO! Dibuja la línea recta punteada (confiable)
+ * Dibuja la línea recta punteada.
+ * AHORA CORREGIDO para manejar coordenadas [lon, lat, alt]
  */
 export function dibujarPaso(paso, puntoInicio) {
     limpiarCapasDeRuta();
@@ -97,7 +102,9 @@ export function dibujarPaso(paso, puntoInicio) {
     let bounds;
     switch(paso.tipo) {
         case 'caminar':
-            const finLatLng = paso.paradero.geometry.coordinates.slice().reverse(); // [lat, lon]
+            // CORREGIDO: Extraer [1] y [0] explícitamente
+            const finCoordsCaminar = paso.paradero.geometry.coordinates;
+            const finLatLng = [finCoordsCaminar[1], finCoordsCaminar[0]]; // [lat, lon]
             
             // Dibujar una línea recta punteada (confiable)
             capaRutaCaminar = L.polyline([inicioLatLng, finLatLng], {
@@ -116,15 +123,22 @@ export function dibujarPaso(paso, puntoInicio) {
                 style: { color: "#FF0000", weight: 5, opacity: 0.8 }
             }).addTo(map);
             
-            const pInicio = paso.paraderoInicio.geometry.coordinates.slice().reverse();
-            const pFin = paso.paraderoFin.geometry.coordinates.slice().reverse();
+            // CORREGIDO: Extraer [1] y [0] explícitamente
+            const pInicioCoords = paso.paraderoInicio.geometry.coordinates;
+            const pFinCoords = paso.paraderoFin.geometry.coordinates;
+            const pInicio = [pInicioCoords[1], pInicioCoords[0]];
+            const pFin = [pFinCoords[1], pFinCoords[0]];
+
             L.marker(pInicio).addTo(marcadores).bindPopup(`Subir en: ${paso.paraderoInicio.properties.nombre}`);
             L.marker(pFin).addTo(marcadores).bindPopup(`Bajar en: ${paso.paraderoFin.properties.nombre}`);
             bounds = capaRutaBus.getBounds();
             break;
         
         case 'transbordo':
-            const pTransbordo = paso.paradero.geometry.coordinates.slice().reverse();
+            // CORREGIDO: Extraer [1l] y [0] explícitamente
+            const pTransbordoCoords = paso.paradero.geometry.coordinates;
+            const pTransbordo = [pTransbordoCoords[1], pTransbordoCoords[0]];
+
             L.marker(pTransbordo).addTo(marcadores)
                 .bindPopup(`Transbordo: ${paso.paradero.properties.nombre}`)
                 .openPopup();
@@ -132,7 +146,10 @@ export function dibujarPaso(paso, puntoInicio) {
             break;
 
         case 'fin':
-            const pDestino = paso.paradero.geometry.coordinates.slice().reverse();
+            // CORREGIDO: Extraer [1] y [0] explícitamente
+            const pDestinoCoords = paso.paradero.geometry.coordinates;
+            const pDestino = [pDestinoCoords[1], pDestinoCoords[0]];
+
             L.marker(pDestino).addTo(marcadores)
                 .bindPopup("¡Destino!")
                 .openPopup();
@@ -143,3 +160,6 @@ export function dibujarPaso(paso, puntoInicio) {
     // Devolvemos los límites para que app.js haga el zoom
     return bounds;
 }
+// =================================================================
+// ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
+// =================================================================
