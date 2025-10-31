@@ -11,7 +11,7 @@ body, html {
 #map {
     height: 100%;
     width: 100%;
-    z-index: 1; 
+    z-index: 1; /* Capa base */
 }
 
 /* Panel de control flotante */
@@ -23,7 +23,7 @@ body, html {
     max-width: calc(100% - 60px); /* Ancho máximo en móviles */
     max-height: 95%;
     background-color: white;
-    z-index: 1000; 
+    z-index: 1000; /* Capa intermedia (detrás del botón) */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     display: flex;
@@ -103,7 +103,7 @@ body, html {
     width: 320px; 
     max-width: calc(100% - 20px); 
     background: white;
-    z-index: 1001; 
+    z-index: 1001; /* Capa superior (misma que el toggle) */
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     display: flex;
@@ -139,12 +139,15 @@ body, html {
     border-color: #dc3545;
 }
 
-/* --- ¡ESTILOS CORREGIDOS PARA LA BURBUJA! --- */
+/* =================================================================
+   ⬇️⬇️⬇️ INICIO DE LA SECCIÓN CORREGIDA ⬇️⬇️⬇️
+   ================================================================= */
+
 #panel-toggle {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 1001;
+    z-index: 1001; /* ¡Capa superior! (Encima del panel-control) */
     background-color: white;
     border-radius: 50%;
     width: 40px;
@@ -154,32 +157,26 @@ body, html {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.3s ease; /* Solo transicionamos la opacidad */
-    opacity: 0; /* Oculta por defecto */
-    transform: translateX(0); /* ¡NUNCA SE MUEVE! */
+    opacity: 1; /* ¡AHORA SIEMPRE VISIBLE! */
+    pointer-events: all; /* Siempre clicable */
+    transform: translateX(0); /* No se mueve */
 }
 #panel-toggle svg {
     width: 24px;
     height: 24px;
 }
 
-/* Cuando el panel está oculto, la burbuja aparece */
-#panel-control.oculto + #panel-toggle {
-    opacity: 1;
-    pointer-events: all; /* Se puede hacer clic */
-}
-
-/* Cuando el panel está visible, la burbuja se oculta */
-#panel-control:not(.oculto) + #panel-toggle {
-    opacity: 0;
-    pointer-events: none; /* No se puede hacer clic */
-}
+/* (Las reglas de opacidad que estaban aquí se eliminaron) */
 
 /* Oculta la burbuja si estamos en modo navegación */
-#panel-navegacion:not([style*="display:none"]) ~ #panel-toggle {
+/* CORREGIDO: Ahora usa .oculto en lugar de [style*="display:none"] */
+#panel-navegacion:not(.oculto) ~ #panel-toggle {
     display: none;
 }
-/* --- FIN DE ESTILOS CORREGIDOS --- */
+
+/* =================================================================
+   ⬆️⬆️⬆️ FIN DE LA SECCIÓN CORREGIDA ⬆️⬆️⬆️
+   ================================================================= */
 
 
 /* Estilos de Opciones de Ruta */
