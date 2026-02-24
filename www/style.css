@@ -919,20 +919,17 @@ body.dark-mode .marca-flotante-top {
     pointer-events: none;
 }
 
-/* =========================================
-   BANNER INTELIGENTE DE ESTADO (MOTOR)
-   ========================================= */
 #banner-inteligente-koox {
-    position: absolute; 
-    top: 85px; /* Justo debajo del buscador */
+    position: fixed; /* 🚀 ANTES: absolute. FIXED lo ancla a la pantalla del celular */
+    top: 110px;      /* ⬇️ Lo bajamos un poco más para asegurar que libre tu buscador blanco */
     left: 50%; 
     transform: translateX(-50%);
-    z-index: 2000; 
+    z-index: 9999;   /* 🚀 ANTES: 2000. Ahora tiene poder absoluto sobre todo */
     padding: 10px 20px; 
     border-radius: 30px;
     font-weight: bold; 
     font-size: 0.9em; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* Sombra un poco más fuerte para resaltar */
     display: flex; 
     align-items: center; 
     gap: 8px; 
@@ -948,6 +945,3 @@ body.dark-mode .marca-flotante-top {
     opacity: 1; 
     margin-top: 0; 
 }
-.status-critico { background: #dc3545; color: white; border: 2px solid #b02a37; }
-.status-nocturno { background: #312e81; color: #e0e7ff; border: 2px solid #4338ca; }
-.status-trafico { background: #f59e0b; color: white; border: 2px solid #d97706; }

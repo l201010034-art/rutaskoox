@@ -83,7 +83,9 @@ function renderizarBanner(estado) {
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'banner-inteligente-koox';
-        document.getElementById('map').appendChild(banner);
+        
+        // 🚀 CAMBIO CLAVE: Lo sacamos del 'map' y lo anclamos al 'body'
+        document.body.appendChild(banner); 
     }
 
     if (estado.tipo === 'status-ok') {
