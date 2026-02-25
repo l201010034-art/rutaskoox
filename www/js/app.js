@@ -1108,6 +1108,7 @@ function handleExplorarRuta(rutaId) {
 
 // ⬇️ MODIFICADO: Ahora el HTML se inserta en 'panel-instrucciones' ⬇️
 function limpiarMapa() {
+    window.unidadAbordadaViajeActual = null;
     dibujarPlan([]);
     limpiarCapasDeRuta();
     actualizarDisplayAlertas(); // ⬅️ AÑADIDA
@@ -1560,63 +1561,56 @@ function handleLocationUpdate(pos) {
     const navState = updatePosition(puntoInicio, speed); 
     if (!navState) return; // Salimos si la navegación no está iniciada
 
+// ----------------------------------------------------
+    // ⬇️⬇️ LÓGICA DE DETECCIÓN "A BORDO" (BLINDADA) ⬇️⬇️
     // ----------------------------------------------------
-    // ⬇️⬇️ LÓGICA DE DETECCIÓN "A BORDO" (CORREGIDA) ⬇️⬇️
-    // ----------------------------------------------------
-    
-    // 1. Solo checkear si el paso actual es de tipo 'bus' o 'caminar'
     if (rutaCompletaPlan && pasoActual < rutaCompletaPlan.length) {
         const paso = rutaCompletaPlan[pasoActual];
         
-        // Queremos detectar si subimos al bus si estamos en el paso de caminar/transbordo.
         if (paso.tipo === 'caminar' || paso.tipo === 'transbordo') {
             const proximoPasoBus = rutaCompletaPlan[pasoActual + 1];
             
             if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
                 const rutaId = proximoPasoBus.ruta.properties.id;
-                
-                // Buscar si tenemos data en tiempo real de alguna unidad en ESA ruta
-                // NOTA: Usamos 'map.eachLayer' para acceder a marcadores de la capa de buses en vivo
-                
-                // Creamos un array de todos los buses en esa ruta
-                let busesEnRuta = [];
-                map.eachLayer(layer => {
-                    // Verificamos si es un marcador de bus y si coincide con la rutaId
-                    if (layer.options && layer.options.rutaId === rutaId) {
-                        busesEnRuta.push(layer);
-                    }
-                });
+                const paraderoSubida = proximoPasoBus.paraderoInicio; // ¡Debemos subir AQUÍ!
                 
                 let busMasCercano = null;
                 let distanciaMinima = Infinity;
+
+                // Aplanamos la ruta para la regla de sentido
+                let rutaLine = proximoPasoBus.ruta;
+                if(rutaLine.geometry.type === 'MultiLineString') {
+                    rutaLine = turf.lineString(rutaLine.geometry.coordinates.flat());
+                }
+                const distParaderoOnLine = turf.nearestPointOnLine(rutaLine, paraderoSubida).properties.location;
                 
-                // Encontramos el bus de ESA ruta más cercano a la posición del usuario
-                busesEnRuta.forEach(busMarker => {
-                    const busLatLng = busMarker.getLatLng();
-                    const busPunto = turf.point([busLatLng.lng, busLatLng.lat]);
-                    const distanciaMetros = turf.distance(puntoInicio, busPunto, { units: 'meters' }) * 1000;
-                    
-                    if (distanciaMetros < distanciaMinima) {
-                        distanciaMinima = distanciaMetros;
-                        busMasCercano = busMarker;
+                map.eachLayer(layer => {
+                    if (layer.options && layer.options.rutaId === rutaId) {
+                        const busPunto = turf.point([layer.getLatLng().lng, layer.getLatLng().lat]);
+                        const distBusOnLine = turf.nearestPointOnLine(rutaLine, busPunto).properties.location;
+                        
+                        // 🛡️ REGLA DE SENTIDO (Ida/Vuelta): El bus debe estar ANTES del paradero (damos 150m de tolerancia)
+                        if (distBusOnLine <= distParaderoOnLine + 0.15) {
+                            const distanciaMetros = turf.distance(puntoInicio, busPunto, { units: 'meters' }) * 1000;
+                            if (distanciaMetros < distanciaMinima) {
+                                distanciaMinima = distanciaMetros;
+                                busMasCercano = layer;
+                            }
+                        }
                     }
                 });
 
-
                 const UMBRAL_A_BORDO = 20; // 20 metros de margen
                 
-                // Si encontramos un bus de la ruta que vamos a tomar muy cerca:
                 if (busMasCercano && distanciaMinima < UMBRAL_A_BORDO) {
+                    console.log(`🚌 DETECCIÓN A BORDO: Unidad ${busMasCercano.options.unidadId}`);
                     
-                    console.log(`DETECCIÓN A BORDO: Distancia ${distanciaMinima.toFixed(2)}m. Asumiendo subida.`);
+                    // 🔒 EL ANCLAJE: Bloqueamos la app a esta unidad específica
+                    window.unidadAbordadaViajeActual = busMasCercano.options.unidadId; 
                     
-                    // 1. Desactivamos el modo transbordo/espera
                     activarModoTransbordo(false); 
-                    
-                    // 2. Forzamos el avance al paso de BUS
                     siguientePaso(); 
-                    
-                    return; // Terminamos la ejecución de la actualización
+                    return; 
                 }
             }
         }
@@ -2427,28 +2421,39 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                 }
                 // --- 🛡️ FIN GEOCERCA Y ETA MASIVO 🛡️ ---
 
-                // 5. CÁLCULO DE ETA CON LA RUTA "APLANADA" (rutaParaTurf)
+// 5. CÁLCULO DE ETA CON LA RUTA "APLANADA" (rutaParaTurf)
                 if (paraderoDeInteres && rutaParaTurf) {
-                    const puntoBusEnRuta = turf.nearestPointOnLine(rutaParaTurf, busPunto);
-                    const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, paraderoDeInteres.geometry.coordinates);
                     
-                    const distBus = puntoBusEnRuta.properties.location;
-                    const distParadero = puntoParaderoEnRuta.properties.location;
-                    const distanciaRelativaKm = distParadero - distBus;
-
-                    if (distanciaRelativaKm > 0.01) { 
-                        const tramoFaltante = turf.lineSlice(puntoBusEnRuta, puntoParaderoEnRuta, rutaParaTurf);
-                        const distanciaMetros = turf.length(tramoFaltante, { units: 'meters' });
-                        
-                        approachingBusesMap.set(unidadId, {
-                            id: bus.unit_number || unidadId, 
-                            distanciaMetros: distanciaMetros,
-                            speed: velocidadReal
-                        });
-                    } else {
+                    // 🔒 CANDADO DE ANCLAJE PARA ETA (Evita brincar entre unidades)
+                    let enViaje = (rutaCompletaPlan && rutaCompletaPlan[pasoActual] && rutaCompletaPlan[pasoActual].tipo === 'bus');
+                    
+                    if (enViaje && window.unidadAbordadaViajeActual && window.unidadAbordadaViajeActual !== unidadId) {
+                        // Si ya vamos en una unidad, ignoramos por completo a esta unidad "intrusa"
                         approachingBusesMap.delete(unidadId);
+                    } else {
+                        // --- MATEMÁTICA NORMAL DE ETA Y SENTIDO ---
+                        const puntoBusEnRuta = turf.nearestPointOnLine(rutaParaTurf, busPunto);
+                        const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, paraderoDeInteres.geometry.coordinates);
+                        
+                        const distBus = puntoBusEnRuta.properties.location;
+                        const distParadero = puntoParaderoEnRuta.properties.location;
+                        const distanciaRelativaKm = distParadero - distBus;
+
+                        // Solo procesa buses que van HACIA el paradero (no los que ya pasaron)
+                        if (distanciaRelativaKm > 0.01) { 
+                            const tramoFaltante = turf.lineSlice(puntoBusEnRuta, puntoParaderoEnRuta, rutaParaTurf);
+                            const distanciaMetros = turf.length(tramoFaltante, { units: 'meters' });
+                            
+                            approachingBusesMap.set(unidadId, {
+                                id: bus.unit_number || unidadId, 
+                                distanciaMetros: distanciaMetros,
+                                speed: velocidadReal
+                            });
+                        } else {
+                            approachingBusesMap.delete(unidadId);
+                        }
                     }
-                    
+
                     const approachingBuses = Array.from(approachingBusesMap.values());
                     
                     if (approachingBuses.length > 0) {

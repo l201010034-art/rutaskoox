@@ -342,9 +342,15 @@ export function actualizarMarcadorBus(bus, rutaId) {
             if (distanciaMetros > 3) {
                 angulo = turf.bearing(puntoViejo, puntoNuevo);
                 
-                // 🚀 Magia: Si Vinden falla y manda 0, calculamos nosotros (D / T) * 3.6
+// 🚀 Magia: Si Vinden falla y manda 0, calculamos nosotros (D / T) * 3.6
                 if (speedKmH === 0 && tiempoSegundos > 0 && tiempoSegundos < 60) {
-                    speedKmH = (distanciaMetros / tiempoSegundos) * 3.6;
+                    let velocidadCalculada = (distanciaMetros / tiempoSegundos) * 3.6;
+                    
+                    // 🛡️ EL GOBERNADOR ANTI-SALTOS GPS (Límite 90 km/h)
+                    if (velocidadCalculada > 90) {
+                        velocidadCalculada = markerActual.options.ultimaVelocidadValida || 0;
+                    }
+                    speedKmH = velocidadCalculada;
                 }
             } else {
                 angulo = markerActual.options.angulo || 0; 
@@ -353,6 +359,7 @@ export function actualizarMarcadorBus(bus, rutaId) {
         }
         markerActual.options.lastUpdate = now;
         markerActual.options.angulo = angulo;
+        markerActual.options.ultimaVelocidadValida = speedKmH; // ⬅️ Guardamos la velocidad sana
     }
 
     // Exportamos la velocidad a prueba de fallos para que el Motor la lea
@@ -401,7 +408,8 @@ export function actualizarMarcadorBus(bus, rutaId) {
     } else {
         const marker = L.marker(latlng, {
             icon: iconoDinamico, zIndexOffset: 1000, angulo: angulo, lastUpdate: Date.now(),
-            rutaId: rutaId // ⬅️ AQUÍ ES DONDE SÍ IBA ESTA LÍNEA
+            rutaId: rutaId, 
+            unidadId: unidadId // ⬅️ AÑADE ESTA LÍNEA PARA EL ANCLAJE
         }).addTo(capaBusesEnVivo).bindPopup(popupContenido);
         marcadoresBuses.set(unidadId, marker);
     }
