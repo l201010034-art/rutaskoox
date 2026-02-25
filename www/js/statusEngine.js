@@ -34,7 +34,9 @@ export function registrarLatidoBusMotor(unidadId, velocidadKmH, rutaId) {
 function evaluarEscenario() {
     const ahora = new Date();
     const hora = ahora.getHours();
-    const limiteCierre = (ahora.getDay() === 0 || ahora.getDay() === 6) ? 22 : 23; 
+    
+    // Asumimos que el servicio termina a las 10 PM fines de semana y 11 PM entre semana
+    const limiteCierre = (ahora.getDay() === 0 || ahora.getDay() === 6) ? 22 : 24; 
 
     // 1. Limpiar buses desconectados (2 minutos sin señal)
     const limiteTiempo = ahora.getTime() - 120000;
@@ -42,13 +44,17 @@ function evaluarEscenario() {
         if (datos.lastUpdate < limiteTiempo) flotaActiva.delete(id);
     }
 
+    // --- REGLA 1: APAGADO GENERAL (Madrugada) ---
     if (hora >= limiteCierre || hora < 5) {
-        renderizarBanner({ tipo: 'status-critico', icon: 'ri-moon-clear-line', texto: 'Servicio finalizado por hoy' });
-        return;
+        renderizarBanner({ 
+            tipo: 'status-nocturno', 
+            icon: 'ri-moon-clear-line', 
+            texto: 'Servicio finalizado por hoy' 
+        });
+        return; // Detiene la evaluación
     }
 
-    // --- EL ESCÁNER DE VIAJE (Pre-Flight Check) ---
-    // Contamos cuántos buses hay POR CADA RUTA que necesita el usuario
+    // Contamos cuántos buses hay POR CADA RUTA
     let conteoPorRuta = {};
     rutasMonitorizadas.forEach(r => conteoPorRuta[r] = 0);
     
@@ -58,14 +64,14 @@ function evaluarEscenario() {
         }
     });
 
- // ... dentro de evaluarEscenario(), en la parte del Escáner de Viaje ...
-    
+    // --- REGLA 2: ALERTAS POR RUTA (Cero unidades o Última unidad) ---
     for (const [rutaId, cantidad] of Object.entries(conteoPorRuta)) {
-        // 🛡️ SEGURO: Ignoramos si la ruta es undefined o nula
         if (!rutaId || rutaId === 'undefined') continue;
+        
+        const nombreLimpio = String(rutaId).replace('koox-', '').toUpperCase();
 
+        // A. Alerta Roja: La ruta está completamente muerta
         if (cantidad === 0 && (Date.now() - tiempoInicioRuta > 8000)) {
-            const nombreLimpio = String(rutaId).replace('koox-', '').toUpperCase();
             renderizarBanner({ 
                 tipo: 'status-critico', 
                 icon: 'ri-alert-line', 
@@ -73,8 +79,53 @@ function evaluarEscenario() {
             });
             return; 
         }
+
+        // B. Alerta Morada: ¡ÚLTIMA UNIDAD! (Súper útil en las noches)
+        if (cantidad === 1 && (Date.now() - tiempoInicioRuta > 8000)) {
+            // Solo lo mostramos como crítico si ya es tarde (después de las 7 PM)
+            if (hora >= 19) {
+                renderizarBanner({ 
+                    tipo: 'status-nocturno', 
+                    icon: 'ri-alarm-warning-fill', 
+                    texto: `¡Corre! Es la ÚLTIMA unidad de la ruta ${nombreLimpio}.` 
+                });
+                return;
+            } else {
+                // Si es de día, solo es servicio limitado
+                renderizarBanner({ 
+                    tipo: 'status-trafico', 
+                    icon: 'ri-error-warning-line', 
+                    texto: `Servicio muy limitado en ruta ${nombreLimpio} (1 unidad).` 
+                });
+                return;
+            }
+        }
     }
 
+    // --- REGLA 3: TRÁFICO DENSO (Evaluación general) ---
+    let velocidadTotal = 0;
+    let detenidos = 0;
+    
+    flotaActiva.forEach(datos => {
+        velocidadTotal += datos.speed;
+        if (datos.speed < 8) detenidos++; 
+    });
+
+    const numBusesActivos = flotaActiva.size;
+    
+    if (numBusesActivos >= 3) {
+        const velocidadPromedio = velocidadTotal / numBusesActivos;
+        if (velocidadPromedio < 15 && detenidos >= (numBusesActivos / 2)) {
+            renderizarBanner({ 
+                tipo: 'status-trafico', 
+                icon: 'ri-traffic-light-fill', 
+                texto: 'Tráfico denso detectado: Posibles retrasos' 
+            });
+            return; 
+        }
+    }
+
+    // --- TODO EN ORDEN ---
     renderizarBanner({ tipo: 'status-ok' });
 }
 

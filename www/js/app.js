@@ -2292,7 +2292,8 @@ export function detenerEscuchaBuses() {
 }
 
 /**
- * (NUEVO) Muestra/Oculta la información de ETA en la UI
+ * (ACTUALIZADO) Muestra/Oculta la información de ETA adaptando el texto
+ * dependiendo de si estamos esperando o viajando.
  */
 function mostrarInfoETA(info) {
     const etaContenedor = document.getElementById('eta-info');
@@ -2304,12 +2305,20 @@ function mostrarInfoETA(info) {
         return;
     }
     
-    let contenido = `<strong>Próximo bus (Unidad ${info.id}):</strong>`;
+    // 🚀 Detectamos si estamos esperando o ya vamos en viaje
+    let enViaje = false;
+    if (rutaCompletaPlan && rutaCompletaPlan[pasoActual] && rutaCompletaPlan[pasoActual].tipo === 'bus') {
+        enViaje = true;
+    }
+
+    // Adaptamos el título
+    let contenido = `<strong>${enViaje ? 'Viajando en' : 'Próximo bus'} (Unidad ${info.id}):</strong>`;
     
+    // Adaptamos el tiempo/distancia
     if (info.etaMinutos) {
-        contenido += `<p>Llega a tu parada en aprox. <strong>${info.etaMinutos} min</strong>.</p>`;
+        contenido += `<p>${enViaje ? 'Llegas a tu destino en aprox.' : 'Llega a tu parada en aprox.'} <strong>${info.etaMinutos} min</strong>.</p>`;
     } else {
-        contenido += `<p>Está a <strong>${info.distanciaMetros.toFixed(0)} m</strong> de tu parada.</p>`;
+        contenido += `<p>A <strong>${info.distanciaMetros.toFixed(0)} m</strong> de la parada.</p>`;
     }
     
     etaContenedor.innerHTML = contenido;
@@ -2546,37 +2555,38 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
 }
 
 /**
- * (NUEVO) Revisa el paso actual y decide si debe
+ * (ACTUALIZADO) Revisa el paso actual y decide si debe
  * iniciar la escucha de buses (y para dónde).
  */
 function llamarEscuchaParaPaso(indicePaso) {
-    // 1. Detenemos cualquier escucha anterior
+    // 1. Detenemos cualquier escucha anterior para no mezclar rutas
     detenerEscuchaBuses(); 
 
     const paso = rutaCompletaPlan[indicePaso];
     if (!paso) return;
 
-    // 2. LÓGICA DE ETA (Tu corrección):
-    // Solo queremos calcular ETA si estamos CAMINANDO o en TRANSBORDO
+    // 2. CASO A: Caminando hacia el paradero o esperando un transbordo
     if (paso.tipo === 'caminar' || paso.tipo === 'transbordo') {
-        
-        // Buscamos el SIGUIENTE paso (que debe ser 'bus')
         const proximoPasoBus = rutaCompletaPlan[indicePaso + 1];
         
         if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
             const rutaId = proximoPasoBus.ruta.properties.id;
-            // ¡Clave! El paradero de interés es donde vamos a SUBIR.
+            // El paradero de interés es donde vamos a SUBIR
             const paraderoDeSubida = proximoPasoBus.paraderoInicio;
             
-            // Iniciamos la escucha para el bus que vamos a tomar
-            console.log(`Buscando ETA para ${rutaId} en ${paraderoDeSubida.properties.nombre}`);
+            console.log(`Esperando bus: ETA para ${rutaId} en ${paraderoDeSubida.properties.nombre}`);
             iniciarEscuchaBuses(rutaId, paraderoDeSubida);
         }
     }
-    
-    // 3. Si el paso actual es 'bus' o 'fin', NO llamamos a
-    // iniciarEscuchaBuses(). Esto oculta automáticamente el panel
-    // de ETA y los buses (¡justo como querías!)
+    // 3. CASO B: ¡Ya estamos arriba del camión!
+    else if (paso.tipo === 'bus') {
+        const rutaId = paso.ruta.properties.id;
+        // El paradero de interés ahora es donde nos vamos a BAJAR
+        const paraderoDeBajada = paso.paraderoFin;
+        
+        console.log(`Viajando en bus: ETA de bajada para ${rutaId} en ${paraderoDeBajada.properties.nombre}`);
+        iniciarEscuchaBuses(rutaId, paraderoDeBajada);
+    }
 }
 
 // js/app.js
