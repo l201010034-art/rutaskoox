@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff">
 
     <link rel="apple-touch-icon" href="images/icon-512.png">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <title>Rutas Koox | Transporte Público en Campeche</title>
     <meta name="description" content="Mapa interactivo de rutas de transporte público en Campeche. Encuentra paraderos, camiones y horarios en tiempo real. ¡Llega fácil a tu destino!">
@@ -548,6 +549,7 @@ body.dark-mode .marca-flotante-top {
     <script src="https://unpkg.com/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js" defer></script>
     <script src="https://unpkg.com/leaflet.marker.slideto@0.2.0/Leaflet.Marker.SlideTo.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.4.0/socket.io.js" defer></script>
+    <script src="https://unpkg.com/html5-qrcode" defer></script> 
     <script>
         window.addEventListener('load', function() {
             setTimeout(function() {
@@ -615,7 +617,6 @@ body.dark-mode .marca-flotante-top {
             if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; }
         }
     </script>
-    <script src="https://unpkg.com/html5-qrcode" defer></script>
 
 </body>
 </html>

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v5.26'; // Subimos una versión para forzar la actualización
+const CACHE_VERSION = 'v5.28'; // Subimos una versión para forzar la actualización
 const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`; // Corregí un pequeño typo de '1oox' a 'koox'
 
 const APP_SHELL_URLS = [

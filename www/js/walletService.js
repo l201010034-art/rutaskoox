@@ -1,5 +1,5 @@
 // js/walletService.js
-
+import { userSettings } from './settings.js'; // 🚀 ESTA ES LA LÍNEA QUE FALTA
 // 🚀 VERSIÓN DEL MONEDERO (Cámbialo si en el futuro haces otra actualización masiva)
 const VERSION_ACTUAL_MONEDERO = "2.0";
 
@@ -33,17 +33,15 @@ export function obtenerDatosTarjeta() {
 }
 
 export function vincularTarjetaQR(id, tipo) {
-    walletState.tarjetaId = id;
+    walletState.tarjetaId = id; // ⬅️ Asegúrate de que esta línea exista
     walletState.tipoTarjeta = tipo;
     
-    // Si cambia a cualquier tarifa preferencial, cobramos $6
     if (tipo === 'estudiante' || tipo === 'discapacidad' || tipo === 'inapam') {
         userSettings.tarifaPreferencial = true;
     } else {
-        userSettings.tarifaPreferencial = false; // General $12
+        userSettings.tarifaPreferencial = false;
     }
     
-    // Guardamos los settings globales
     localStorage.setItem('kooxSettings', JSON.stringify(userSettings));
     guardarWallet();
 }

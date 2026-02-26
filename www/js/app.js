@@ -721,36 +721,44 @@ function actualizarInterfazTarjeta() {
     const contenedorEscaner = document.getElementById('contenedor-escaner');
     let scannerH5 = null;
 
-    if (btnEscanear) {
+if (btnEscanear) {
         btnEscanear.addEventListener('click', () => {
+            // Aseguramos que el contenedor esté limpio antes de empezar
+            document.getElementById('lector-qr').innerHTML = "";
             contenedorEscaner.style.display = 'block';
             btnEscanear.style.display = 'none';
 
-// Iniciar html5-qrcode
+            // Inicialización limpia
             scannerH5 = new Html5Qrcode("lector-qr");
+            
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0 
+            };
+
             scannerH5.start(
-                { facingMode: "environment" }, // Cámara trasera
-                
-                // 🚀 ARREGLO DE CÁMARA: aspectRatio 1.0 fuerza un cuadrado perfecto para que no crezca la pantalla
-                { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 }, 
-                
+                { facingMode: "environment" }, 
+                config,
                 (decodedText) => {
-                    // ¡QR DETECTADO!
-                    scannerH5.stop();
-                    contenedorEscaner.style.display = 'none';
-                    btnEscanear.style.display = 'inline-block';
-                    
-                    // Vinculamos y guardamos el tipo seleccionado
-                    const tipoSeleccionado = selectTipoTarjeta.value;
-                    vincularTarjetaQR(decodedText, tipoSeleccionado);
-                    actualizarInterfazTarjeta();
-                    
-                    alert(`✅ ¡Tarjeta ${tipoSeleccionado.toUpperCase()} vinculada con éxito!\nID: ${decodedText}`);
+                    // ÉXITO AL ESCANEAR
+                    scannerH5.stop().then(() => {
+                        contenedorEscaner.style.display = 'none';
+                        btnEscanear.style.display = 'inline-block';
+                        
+                        const tipoSeleccionado = selectTipoTarjeta.value;
+                        vincularTarjetaQR(decodedText, tipoSeleccionado);
+                        actualizarInterfazTarjeta();
+                        
+                        alert(`✅ ¡Tarjeta vinculada!\nID: ${decodedText}`);
+                    }).catch(err => console.error("Error al detener:", err));
                 },
-                (err) => { /* ignorar errores de frame vacío */ }
+                (errorMessage) => { /* Silenciar errores de escaneo continuo */ }
             ).catch(err => {
-                alert("Error al iniciar la cámara. Asegúrate de dar permisos.");
-                console.error(err);
+                console.error("Error crítico de cámara:", err);
+                alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en el navegador o en los ajustes del celular.");
+                contenedorEscaner.style.display = 'none';
+                btnEscanear.style.display = 'inline-block';
             });
         });
     }
