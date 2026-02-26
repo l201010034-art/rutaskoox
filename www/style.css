@@ -920,16 +920,16 @@ body.dark-mode .marca-flotante-top {
 }
 
 #banner-inteligente-koox {
-    position: fixed; /* 🚀 ANTES: absolute. FIXED lo ancla a la pantalla del celular */
-    top: 110px;      /* ⬇️ Lo bajamos un poco más para asegurar que libre tu buscador blanco */
+    position: fixed; 
+    top: 175px; /* 🚀 ANTES: 110px. Ahora librará tu panel de ETA perfectamente */
     left: 50%; 
     transform: translateX(-50%);
-    z-index: 9999;   /* 🚀 ANTES: 2000. Ahora tiene poder absoluto sobre todo */
+    z-index: 9999;   
     padding: 10px 20px; 
     border-radius: 30px;
     font-weight: bold; 
     font-size: 0.9em; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* Sombra un poco más fuerte para resaltar */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
     display: flex; 
     align-items: center; 
     gap: 8px; 
@@ -944,4 +944,44 @@ body.dark-mode .marca-flotante-top {
 #banner-inteligente-koox.visible { 
     opacity: 1; 
     margin-top: 0; 
+}
+
+/* =========================================
+   ESTILOS FORZADOS PARA ESCÁNER QR
+   ========================================= */
+#contenedor-escaner {
+    border-radius: 15px !important;
+    overflow: hidden !important;
+    background: #000;
+}
+
+#lector-qr video {
+    width: 100% !important;
+    max-height: 280px !important; /* Evita que crezca hacia abajo */
+    object-fit: cover !important; /* Recorta el video sobrante como Instagram */
+    border-radius: 15px 15px 0 0 !important;
+}
+
+#lector-qr select {
+    /* Oculta o embellece el selector de cámaras feo que a veces saca la librería */
+    margin-bottom: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    width: 90%;
+}
+
+#nav-estado {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px; /* ⬅️ Esto crea la separación automática entre los textos */
+    padding: 10px;
+    font-size: 0.95em;
+    background: var(--secondary-bg);
+    border-radius: 10px;
+    margin-top: 10px;
+}
+#nav-estado strong {
+    font-weight: 600;
+    color: var(--text-color);
 }

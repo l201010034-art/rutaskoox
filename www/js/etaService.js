@@ -14,55 +14,36 @@ export function limpiarETAs() {
 /**
  * Calcula el tiempo faltante de un bus hacia múltiples paraderos.
  */
-export function procesarETAMasivo(bus, puntoBus, rutaAplanada, paraderosActivos, rutaId) {
-    if (!rutaAplanada || !paraderosActivos || paraderosActivos.length === 0) return;
+// js/etaService.js
 
-    let velocidadKmH = bus.velocidadCalculada;
-    // Seguro: Si está en semáforo (0) asumimos 15 km/h para que no dé tiempo infinito
-    if (!velocidadKmH || velocidadKmH < 5) velocidadKmH = 15; 
+export function procesarETAMasivo(bus, busPunto, rutaGeoJSON, paraderos, rutaId) {
+    if (!bus || !busPunto || !rutaGeoJSON || !paraderos) return;
+    const unidadId = bus.unit_id;
+    const velocidadReal = bus.status === 5 ? 0 : Math.min(parseFloat(bus.speed) / 3.6 || 0, 22.2);
 
-    try {
-        const puntoBusEnRuta = turf.nearestPointOnLine(rutaAplanada, puntoBus);
-        const distBusKm = puntoBusEnRuta.properties.location;
-        const longitudTotalRuta = turf.length(rutaAplanada, { units: 'kilometers' });
+    const puntoBusEnRuta = turf.nearestPointOnLine(rutaGeoJSON, busPunto);
+    const distBusKm = puntoBusEnRuta.properties.location;
 
-        paraderosActivos.forEach(paradero => {
-            const pid = paradero.properties.originalIndex;
-            const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaAplanada, paradero.geometry.coordinates);
-            const distParaderoKm = puntoParaderoEnRuta.properties.location;
+    paraderos.forEach(paradero => {
+        const paraderoId = paradero.properties.originalIndex;
+        const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaGeoJSON, paradero.geometry.coordinates);
+        const distParaderoKm = puntoParaderoEnRuta.properties.location;
 
-            let distanciaRelativaKm = distParaderoKm - distBusKm;
+        const distanciaFaltanteKm = distParaderoKm - distBusKm;
 
-            // 🔄 MAGIA CIRCULAR: Si la distancia es negativa (el bus está en la vuelta o "ya pasó")
-            // Le sumamos la longitud total de la ruta para calcular cuánto falta para su siguiente vuelta.
-            if (distanciaRelativaKm < -0.05) {
-                distanciaRelativaKm = longitudTotalRuta + distanciaRelativaKm;
-            }
+        // 🛡️ REGLA TOPOLÓGICA: Solo tomamos en cuenta buses que VAN hacia el paradero
+        if (distanciaFaltanteKm > -0.05) {
+            const distanciaMetros = distanciaFaltanteKm * 1000;
+            const etaMinutos = velocidadReal > 1.0 ? Math.round((distanciaMetros / velocidadReal) / 60) : null;
 
-            // Filtro para evitar ETAs absurdos (> 30km de distancia)
-            if (distanciaRelativaKm > 0.05 && distanciaRelativaKm < 30) { 
-                const distMetros = distanciaRelativaKm * 1000;
-                const etaMinutos = Math.round((distMetros / velocidadKmH) * 0.06);
+            actualizarRegistroETA(paraderoId, unidadId, rutaId, distanciaMetros, etaMinutos);
+        } else {
+            // Si el bus ya pasó, lo eliminamos de este paradero específico
+            eliminarRegistroETA(paraderoId, unidadId);
+        }
+    });
 
-                if (!etasGlobales[pid]) etasGlobales[pid] = {};
-                
-                // Guardamos el ETA solo si es más rápido que el anterior, y guardamos LA HORA EXACTA
-                if (!etasGlobales[pid][rutaId] || etasGlobales[pid][rutaId].etaMinutos > etaMinutos) {
-                    etasGlobales[pid][rutaId] = { 
-                        etaMinutos: etaMinutos, 
-                        unidad: bus.unit_number || bus.unit_id,
-                        actualizado: Date.now() 
-                    };
-                }
-            }
-        });
-
-        limpiarETAsCaducos(); // 🧹 Borra camiones fantasma
-        actualizarUIDeETAs();
-
-    } catch(e) {
-        console.warn("Error en el cálculo de ETA circular:", e);
-    }
+    dibujarETAsEnDOM();
 }
 
 /**

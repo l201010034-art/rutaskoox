@@ -1,5 +1,5 @@
 {
-  "appId": "rkooxcampeche.aolastudios.com",
+  "appId": "rkooxcampeche.systemsla.com",
   "appName": "Rutas Ko'ox - Planifica tu ruta!",
   "webDir": "www",
   "plugins": {
@@ -9,6 +9,10 @@
       "backgroundColor": "#ffffff",
       "androidSplashResourceName": "splash",
       "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "light",
+      "backgroundColor": "#ffffff"
     }
   }
 }

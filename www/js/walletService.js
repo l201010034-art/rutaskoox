@@ -1,23 +1,60 @@
 // js/walletService.js
-import { userSettings } from './settings.js';
-import { LocalNotifications } from '@capacitor/local-notifications';
 
-// 💰 Tarifas Oficiales 2026 (1er viaje, 2do viaje, 3ro, 4to)
-const TARIFAS = {
-    general: [12.00, 6.00, 0.00, 0.00], 
-    preferencial: [6.00, 3.00, 0.00, 0.00] 
-};
-
-const VENTANA_TRANSBORDO_MS = 90 * 60 * 1000; // 90 minutos para transbordos
-const TIEMPO_DESCENSO_MS = 60 * 1000; // 60 segundos caminando para liberar el anclaje
+// 🚀 VERSIÓN DEL MONEDERO (Cámbialo si en el futuro haces otra actualización masiva)
+const VERSION_ACTUAL_MONEDERO = "2.0";
 
 // 💾 Memoria a largo plazo (Se guarda en el celular)
-let walletState = JSON.parse(localStorage.getItem('kooxWallet')) || {
-    saldo: 0.00,
-    viajesEnVentana: 0,
-    ultimoCobro: 0,
-    ultimaUnidadCobrada: null 
-};
+let walletState = JSON.parse(localStorage.getItem('kooxWallet'));
+
+// 🛡️ CONTROL DE VERSIONES: Si es un usuario viejo o no tiene la versión 2.0, formateamos su monedero
+if (!walletState || walletState.version !== VERSION_ACTUAL_MONEDERO) {
+    console.log("♻️ Actualizando monedero a la versión " + VERSION_ACTUAL_MONEDERO);
+    walletState = {
+        saldo: 0.00,
+        viajesEnVentana: 0,
+        ultimoCobro: 0,
+        ultimaUnidadCobrada: null,
+        tarjetaId: null,      
+        tipoTarjeta: 'general',
+        version: VERSION_ACTUAL_MONEDERO // ⬅️ Sello de la nueva versión
+    };
+    localStorage.setItem('kooxWallet', JSON.stringify(walletState));
+    
+    // También reseteamos el ajuste de tarifa por seguridad
+    userSettings.tarifaPreferencial = false;
+    localStorage.setItem('kooxSettings', JSON.stringify(userSettings));
+}
+
+export function obtenerDatosTarjeta() {
+    return {
+        id: walletState.tarjetaId,
+        tipo: walletState.tipoTarjeta
+    };
+}
+
+export function vincularTarjetaQR(id, tipo) {
+    walletState.tarjetaId = id;
+    walletState.tipoTarjeta = tipo;
+    
+    // Si cambia a cualquier tarifa preferencial, cobramos $6
+    if (tipo === 'estudiante' || tipo === 'discapacidad' || tipo === 'inapam') {
+        userSettings.tarifaPreferencial = true;
+    } else {
+        userSettings.tarifaPreferencial = false; // General $12
+    }
+    
+    // Guardamos los settings globales
+    localStorage.setItem('kooxSettings', JSON.stringify(userSettings));
+    guardarWallet();
+}
+
+export function fijarSaldo(cantidad) {
+    let nuevoSaldo = parseFloat(cantidad);
+    if (isNaN(nuevoSaldo) || nuevoSaldo < 0) nuevoSaldo = 0;
+    
+    walletState.saldo = nuevoSaldo;
+    guardarWallet();
+}
 
 // 🚶‍♂️ Estado físico en vivo (Se borra si cierra la app)
 export let estadoFisico = {
@@ -136,4 +173,15 @@ async function mostrarAlertaUI(titulo, mensaje) {
             }]
         });
     } catch (e) { alert(`${titulo}\n${mensaje}`); }
+}
+
+export function desvincularTarjetaQR() {
+    walletState.tarjetaId = null;
+    walletState.tipoTarjeta = 'general';
+    
+    // Regresamos el cobro a pasaje normal ($12)
+    userSettings.tarifaPreferencial = false;
+    localStorage.setItem('kooxSettings', JSON.stringify(userSettings));
+    
+    guardarWallet();
 }

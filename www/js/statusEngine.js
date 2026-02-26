@@ -36,7 +36,7 @@ function evaluarEscenario() {
     const hora = ahora.getHours();
     
     // Asumimos que el servicio termina a las 10 PM fines de semana y 11 PM entre semana
-    const limiteCierre = (ahora.getDay() === 0 || ahora.getDay() === 6) ? 22 : 24; 
+    const limiteCierre = (ahora.getDay() === 0 || ahora.getDay() === 6) ? 22 : 23; 
 
     // 1. Limpiar buses desconectados (2 minutos sin señal)
     const limiteTiempo = ahora.getTime() - 120000;

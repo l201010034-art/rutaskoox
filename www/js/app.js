@@ -24,6 +24,8 @@ import { procesarETAMasivo, limpiarETAs } from './etaService.js';
 import { esBusVisible } from './privacyService.js';
 import { iniciarTour, checkAndStartTour } from './tour.js';
 import { iniciarMotorInteligente, detenerMotorInteligente, registrarLatidoBusMotor } from './statusEngine.js';
+import { recargarSaldo, obtenerSaldo, procesarAbordaje, vincularTarjetaQR, obtenerDatosTarjeta, fijarSaldo, desvincularTarjetaQR } from './walletService.js';
+import { calcularCostoEstimado, checkSaldoParaRuta, advertirSaldoInsuficiente } from './costService.js';
 
 async function mantenerPantallaEncendida() {
     try {
@@ -277,8 +279,7 @@ function actualizarDisplayAlertas() {
 // ⬆️⬆️ FIN DE FUNCIONES GLOBALES DE ALERTA Y RUTAS ⬆️⬆️
 
 // --- 4. ARRANQUE DE LA APP ---
-document.addEventListener('DOMContentLoaded', async () => {
-
+document.addEventListener('DOMContentLoaded', async () => { 
 
     // Listener para el botón de prueba
     const btnTest = document.getElementById('btnTestSimulador');
@@ -375,11 +376,6 @@ const btnMinimizarNav = document.getElementById('btnMinimizarNav');
     // Comprobar el estado al cargar la app
     actualizarEstadoOffline();
     // ⬆️⬆️ FIN DEL MÓDULO OFFLINE ⬆️⬆️
-
-// js/app.js (en DOMContentLoaded)
-
-    // ⬇️⬇️ INICIO MÓDULO FIREBASE (RECEPCIÓN DE ALERTAS) ⬇️⬇️
-// js/app.js (en DOMContentLoaded)
 
     // ⬇️⬇️ INICIO MÓDULO FIREBASE (RECEPCIÓN DE ALERTAS) - MODIFICADO ⬇️⬇️
     try {
@@ -641,6 +637,162 @@ if (btnBuscarLugar) {
         console.error("Error cargando o procesando los datos GeoJSON:", error);
     }
     checkAndStartTour();
+
+    // ⬇️⬇️ INICIALIZAR MONEDERO VIRTUAL Y ESCÁNER QR ⬇️⬇️
+    const uiSaldo = document.getElementById('ui-saldo-virtual');
+    const uiIdTarjeta = document.getElementById('ui-id-tarjeta');
+    const selectTipoTarjeta = document.getElementById('select-tipo-tarjeta');
+    const tarjetaUI = document.getElementById('tarjeta-virtual-ui');
+    const etiquetaTipo = document.getElementById('etiqueta-tipo-tarjeta');
+    
+// COLORES EXACTOS DE LAS TARJETAS FÍSICAS KOO'OX
+    const coloresTarjeta = {
+        'general': 'linear-gradient(135deg, #8B1F41, #5c1120)', // Guinda/Vino oficial
+        'estudiante': 'linear-gradient(135deg, #D4AF37, #B8860B)', // Dorado
+        'discapacidad': 'linear-gradient(135deg, #4CAF50, #2E7D32)', // Verde
+        'inapam': 'linear-gradient(135deg, #ef5350, #c62828)' // Rojo más bajito
+    };
+
+function actualizarInterfazTarjeta() {
+        if (!uiSaldo) return;
+        const datos = obtenerDatosTarjeta();
+        const btnEscanear = document.getElementById('btn-escanear-qr');
+        const btnDesvincular = document.getElementById('btn-desvincular-qr');
+        
+        uiSaldo.innerText = `$${obtenerSaldo()}`;
+        
+        if (datos.id) {
+            // 🔒 ESTADO: TARJETA VINCULADA
+            uiIdTarjeta.innerText = `ID: ${datos.id}`;
+            selectTipoTarjeta.value = datos.tipo; // Forzamos a mostrar el tipo real guardado
+            selectTipoTarjeta.disabled = true;    // Bloqueamos el selector para evitar cambios accidentales
+            
+            if (btnEscanear) btnEscanear.style.display = 'none';
+            if (btnDesvincular) btnDesvincular.style.display = 'inline-block';
+        } else {
+            // 🔓 ESTADO: SIN VINCULAR (Libre)
+            uiIdTarjeta.innerText = 'ID: SIN VINCULAR';
+            selectTipoTarjeta.disabled = false;   // Desbloqueamos el selector
+            
+            if (btnEscanear) btnEscanear.style.display = 'inline-block';
+            if (btnDesvincular) btnDesvincular.style.display = 'none';
+        }
+        
+        // Pintamos la tarjeta basándonos en el selector
+        const tipoActual = selectTipoTarjeta.value;
+        tarjetaUI.style.background = coloresTarjeta[tipoActual];
+        tarjetaUI.style.boxShadow = `0 15px 35px ${coloresTarjeta[tipoActual].split(',')[1].trim()}66`;
+        etiquetaTipo.innerText = selectTipoTarjeta.options[selectTipoTarjeta.selectedIndex].text;
+    }
+
+    // Al arrancar, pintamos
+    actualizarInterfazTarjeta();
+
+    // Si cambian el select (solo funcionará si no hay tarjeta vinculada)
+    selectTipoTarjeta.addEventListener('change', actualizarInterfazTarjeta);
+
+    // --- LÓGICA DE DESVINCULAR ---
+    const btnDesvincular = document.getElementById('btn-desvincular-qr');
+    if (btnDesvincular) {
+        btnDesvincular.addEventListener('click', () => {
+            if (confirm("¿Seguro que quieres desvincular tu tarjeta actual?")) {
+                desvincularTarjetaQR();
+                selectTipoTarjeta.value = 'general'; // Regresamos por defecto a general
+                actualizarInterfazTarjeta();
+            }
+        });
+    }
+
+    // Al arrancar, pintamos la tarjeta FORZANDO los datos guardados en memoria
+    actualizarInterfazTarjeta(true);
+
+    // Si el usuario cambia el select, SOLO actualizamos colores para previsualizar (no forzamos memoria)
+    selectTipoTarjeta.addEventListener('change', () => actualizarInterfazTarjeta(false));
+
+    // Al arrancar, pintamos la tarjeta
+    actualizarInterfazTarjeta();
+
+    // Si cambian el select, actualizamos el color en vivo
+    selectTipoTarjeta.addEventListener('change', actualizarInterfazTarjeta);
+
+    // --- LÓGICA DEL ESCÁNER QR ---
+    const btnEscanear = document.getElementById('btn-escanear-qr');
+    const btnCerrarEscaner = document.getElementById('btn-cerrar-escaner');
+    const contenedorEscaner = document.getElementById('contenedor-escaner');
+    let scannerH5 = null;
+
+    if (btnEscanear) {
+        btnEscanear.addEventListener('click', () => {
+            contenedorEscaner.style.display = 'block';
+            btnEscanear.style.display = 'none';
+
+// Iniciar html5-qrcode
+            scannerH5 = new Html5Qrcode("lector-qr");
+            scannerH5.start(
+                { facingMode: "environment" }, // Cámara trasera
+                
+                // 🚀 ARREGLO DE CÁMARA: aspectRatio 1.0 fuerza un cuadrado perfecto para que no crezca la pantalla
+                { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 }, 
+                
+                (decodedText) => {
+                    // ¡QR DETECTADO!
+                    scannerH5.stop();
+                    contenedorEscaner.style.display = 'none';
+                    btnEscanear.style.display = 'inline-block';
+                    
+                    // Vinculamos y guardamos el tipo seleccionado
+                    const tipoSeleccionado = selectTipoTarjeta.value;
+                    vincularTarjetaQR(decodedText, tipoSeleccionado);
+                    actualizarInterfazTarjeta();
+                    
+                    alert(`✅ ¡Tarjeta ${tipoSeleccionado.toUpperCase()} vinculada con éxito!\nID: ${decodedText}`);
+                },
+                (err) => { /* ignorar errores de frame vacío */ }
+            ).catch(err => {
+                alert("Error al iniciar la cámara. Asegúrate de dar permisos.");
+                console.error(err);
+            });
+        });
+    }
+
+// ... (aquí arriba está el código de scannerH5.start) ...
+
+    if (btnCerrarEscaner) {
+        btnCerrarEscaner.addEventListener('click', () => {
+            if (scannerH5) {
+                scannerH5.stop().catch(e => console.log(e));
+            }
+            contenedorEscaner.style.display = 'none';
+            btnEscanear.style.display = 'inline-block';
+        });
+    }
+
+    // ----------------------------------------------------
+    // ⬇️⬇️ CONECTAR LOS BOTONES DE SALDO (SIN EL DE PRUEBA) ⬇️⬇️
+    // ----------------------------------------------------
+    const btnRecargarDemo = document.getElementById('btn-recargar-demo');
+    const btnFijarSaldo = document.getElementById('btn-fijar-saldo');
+
+    if (btnRecargarDemo) {
+        btnRecargarDemo.addEventListener('click', () => {
+            recargarSaldo(50);
+            actualizarInterfazTarjeta(); // Actualiza los números en la UI
+            alert("✅ ¡Se sumaron $50 MXN a tu tarjeta!");
+        });
+    }
+
+    if (btnFijarSaldo) {
+        btnFijarSaldo.addEventListener('click', () => {
+            const cantidad = prompt("¿Cuál es el saldo real actual de tu tarjeta física? (ej. 120.50):");
+            if (cantidad !== null && !isNaN(cantidad) && cantidad.trim() !== "") {
+                fijarSaldo(cantidad);
+                actualizarInterfazTarjeta();
+                alert(`✅ Saldo actualizado a $${parseFloat(cantidad).toFixed(2)}`);
+            }
+        });
+    }
+    // ⬆️⬆️ FIN MONEDERO Y ESCÁNER ⬆️⬆️
+
 }); // <-- FIN DEL DOMCONTENTLOADED
 
 // --- 5. LÓGICA DE LA APP (EVENT HANDLERS) ---
@@ -1274,15 +1426,34 @@ function mostrarPlanes(planes) {
     header.innerHTML = `<strong>Se encontraron ${planes.length} opciones:</strong>`;
     fragment.appendChild(header);
     
-    planes.forEach((plan, index) => {
+planes.forEach((plan, index) => {
         const opcionDiv = document.createElement('div');
-        // ... (el resto del bucle)
         opcionDiv.className = 'opcion-ruta';
         
+        const numBuses = plan.filter(p => p.tipo === 'bus').length;
+        const estimacion = calcularCostoEstimado(numBuses); // ⬅️ Recibe el objeto
         const buses = plan.filter(p => p.tipo === 'bus').map(p => p.ruta.properties.id);
+        
         const opcionHeader = document.createElement('h4');
-        opcionHeader.innerHTML = `Opción ${index + 1} <span style="font-weight:normal; font-size: 0.8em;">(${buses.join(' &rarr; ')})</span>`;
+        
+        // 🚀 MAGIA VISUAL: Si trae viaje previo, le ponemos un letrerito amarillo
+        const badgeTransbordo = estimacion.aplicaTransbordoActivo 
+            ? '<div style="font-size:0.65em; background:#ffc107; color:#856404; padding:3px 8px; border-radius:10px; margin-bottom:4px; text-transform:uppercase; font-weight:bold; width:max-content; margin-left:auto;">Transbordo Activo</div>' 
+            : '';
+
+        opcionHeader.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Opción ${index + 1} <br><span style="font-weight:normal; font-size: 0.8em; color: #666;">(${buses.join(' &rarr; ')})</span></span>
+                <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end;">
+                    ${badgeTransbordo}
+                    <span style="background:#e8f5e9; color:#1b5e20; padding:6px 10px; border-radius:12px; font-size:0.9em; font-weight:bold; border:1px solid #c8e6c9;">
+                        $${estimacion.costoTotal.toFixed(2)}
+                    </span>
+                </div>
+            </div>
+        `;
         opcionDiv.appendChild(opcionHeader);
+        // ... (el resto del bucle sigue igual, creando el <ol> y el botón seleccionar) ...
         
         const listaOL = document.createElement('ol');
         plan.forEach(paso => {
@@ -1444,30 +1615,31 @@ function encontrarParaderoMasCercano(punto) {
 function iniciarRutaProgresiva() {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
 
-    // --- 🔒 BLOQUEO PREMIUM 🔒 ---
-    const user = getUsuario();
-    const esPro = isUserPremium();
-
-    if (!user) {
-        // Caso 1: No está logueado
-        if(confirm("Para usar la navegación GPS necesitas guardar tu progreso. ¿Iniciar sesión con Google?")) {
-            iniciarSesion();
+// ⬇️⬇️ NUEVO MÓDULO DE VERIFICACIÓN DE COSTOS ⬇️⬇️
+    const numBuses = rutaCompletaPlan.filter(p => p.tipo === 'bus').length;
+    if (numBuses > 0) {
+        const estimacion = calcularCostoEstimado(numBuses);
+        if (!checkSaldoParaRuta(estimacion.costoTotal)) {
+            advertirSaldoInsuficiente(estimacion.costoTotal);
         }
-        return; // Detenemos la función aquí
+    }
+    // ⬆️⬆️ FIN DEL MÓDULO ⬆️⬆️
+
+    // se guarde en la nube de Firebase, de lo contrario, puedes quitarla también.
+    const user = getUsuario();
+    
+    if (!user) {
+        if(confirm("Para guardar tus viajes favoritos y tu historial, inicia sesión con Google. ¿Deseas hacerlo ahora?")) {
+            iniciarSesion();
+            return;
+        }
+        // Si dice que no, igual lo dejamos usar el GPS como invitado libre.
     }
 
-    if (!esPro) {
-        // Caso 2: Logueado pero NO pagó -> Mostrar Modal de Venta
-        mostrarMensajeIndie();
-        return; // Detenemos la función aquí
-    }
-// ⬇️⬇️ INICIO DEL NUEVO MÓDULO DE HISTORIAL (CORREGIDO) ⬇️⬇️
+    // ⬇️⬇️ INICIO DEL NUEVO MÓDULO DE HISTORIAL ⬇️⬇️
     try {
         const rutaResumen = rutaCompletaPlan.filter(p => p.tipo === 'bus').map(p => p.ruta.properties.id).join(' → ');
-        
-        // --- ESTA ES LA LÍNEA CORREGIDA ---
-        // Siempre usamos 'paraderoInicioCercano' para el ID y Nombre,
-        // ya que 'puntoInicio' (el GPS) no tiene esos datos.
+
         const itemHistorial = {
             inicioId: paraderoInicioCercano.properties.originalIndex,
             inicioNombre: paraderoInicioCercano.properties.nombre,
@@ -1562,7 +1734,7 @@ function handleLocationUpdate(pos) {
     if (!navState) return; // Salimos si la navegación no está iniciada
 
 // ----------------------------------------------------
-    // ⬇️⬇️ LÓGICA DE DETECCIÓN "A BORDO" (BLINDADA) ⬇️⬇️
+    // ⬇️⬇️ LÓGICA DE DETECCIÓN "A BORDO" (BLINDADA V3) ⬇️⬇️
     // ----------------------------------------------------
     if (rutaCompletaPlan && pasoActual < rutaCompletaPlan.length) {
         const paso = rutaCompletaPlan[pasoActual];
@@ -1572,7 +1744,7 @@ function handleLocationUpdate(pos) {
             
             if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
                 const rutaId = proximoPasoBus.ruta.properties.id;
-                const paraderoSubida = proximoPasoBus.paraderoInicio; // ¡Debemos subir AQUÍ!
+                const paraderoSubida = proximoPasoBus.paraderoInicio;
                 
                 let busMasCercano = null;
                 let distanciaMinima = Infinity;
@@ -1587,11 +1759,14 @@ function handleLocationUpdate(pos) {
                 map.eachLayer(layer => {
                     if (layer.options && layer.options.rutaId === rutaId) {
                         const busPunto = turf.point([layer.getLatLng().lng, layer.getLatLng().lat]);
+                        
+                        // 🚀 CORRECCIÓN CRÍTICA: Forzamos KILÓMETROS y multiplicamos por 1000.
+                        // Esto mata el bug que te subía a unidades que estaban a 17km de distancia.
+                        const distanciaMetros = turf.distance(puntoInicio, busPunto, { units: 'kilometers' }) * 1000;
                         const distBusOnLine = turf.nearestPointOnLine(rutaLine, busPunto).properties.location;
                         
-                        // 🛡️ REGLA DE SENTIDO (Ida/Vuelta): El bus debe estar ANTES del paradero (damos 150m de tolerancia)
+                        // 🛡️ REGLA DE SENTIDO: El bus debe estar ANTES del paradero (damos 150m de tolerancia si va pasando)
                         if (distBusOnLine <= distParaderoOnLine + 0.15) {
-                            const distanciaMetros = turf.distance(puntoInicio, busPunto, { units: 'meters' }) * 1000;
                             if (distanciaMetros < distanciaMinima) {
                                 distanciaMinima = distanciaMetros;
                                 busMasCercano = layer;
@@ -1600,17 +1775,30 @@ function handleLocationUpdate(pos) {
                     }
                 });
 
-                const UMBRAL_A_BORDO = 20; // 20 metros de margen
-                
-                if (busMasCercano && distanciaMinima < UMBRAL_A_BORDO) {
-                    console.log(`🚌 DETECCIÓN A BORDO: Unidad ${busMasCercano.options.unidadId}`);
-                    
-                    // 🔒 EL ANCLAJE: Bloqueamos la app a esta unidad específica
-                    window.unidadAbordadaViajeActual = busMasCercano.options.unidadId; 
-                    
-                    activarModoTransbordo(false); 
-                    siguientePaso(); 
-                    return; 
+                const UMBRAL_DISTANCIA = 35; // 35 metros reales y verificados
+                const UMBRAL_VELOCIDAD = 8; // km/h
+
+                if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
+                    const unidadId = busMasCercano.options.unidadId || (busMasCercano.getPopup().getContent().match(/Unidad (\w+)/) || [])[1];
+
+                    // Acumulamos tiempo para estar seguros de que no va pasando
+                    if (window.candidatoAbordaje.unidad === unidadId) {
+                        window.candidatoAbordaje.contador += 3;
+                    } else {
+                        window.candidatoAbordaje.unidad = unidadId;
+                        window.candidatoAbordaje.contador = 0;
+                    }
+
+                    if (window.candidatoAbordaje.contador >= 10 || (speedKmH > UMBRAL_VELOCIDAD)) {
+                        console.log(`🚌 ABORDAJE CONFIRMADO: Unidad ${unidadId} a ${distanciaMinima.toFixed(1)}m`);
+                        window.unidadAbordadaViajeActual = unidadId; 
+                        window.candidatoAbordaje = { unidad: null, contador: 0 };
+                        activarModoTransbordo(false); 
+                        siguientePaso(); 
+                        return; 
+                    }
+                } else {
+                    window.candidatoAbordaje = { unidad: null, contador: 0 };
                 }
             }
         }
@@ -2421,42 +2609,43 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                 }
                 // --- 🛡️ FIN GEOCERCA Y ETA MASIVO 🛡️ ---
 
-// 5. CÁLCULO DE ETA CON LA RUTA "APLANADA" (rutaParaTurf)
+// 5. CÁLCULO DE ETA (CON FILTRO DE SENTIDO TOPOLÓGICO)
                 if (paraderoDeInteres && rutaParaTurf) {
-                    
-                    // 🔒 CANDADO DE ANCLAJE PARA ETA (Evita brincar entre unidades)
                     let enViaje = (rutaCompletaPlan && rutaCompletaPlan[pasoActual] && rutaCompletaPlan[pasoActual].tipo === 'bus');
                     
+                    // Si ya vamos a bordo de la U081, ignoramos por completo a las demás unidades
                     if (enViaje && window.unidadAbordadaViajeActual && window.unidadAbordadaViajeActual !== unidadId) {
-                        // Si ya vamos en una unidad, ignoramos por completo a esta unidad "intrusa"
                         approachingBusesMap.delete(unidadId);
                     } else {
-                        // --- MATEMÁTICA NORMAL DE ETA Y SENTIDO ---
                         const puntoBusEnRuta = turf.nearestPointOnLine(rutaParaTurf, busPunto);
                         const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, paraderoDeInteres.geometry.coordinates);
                         
-                        const distBus = puntoBusEnRuta.properties.location;
-                        const distParadero = puntoParaderoEnRuta.properties.location;
-                        const distanciaRelativaKm = distParadero - distBus;
+                        // 'location' devuelve la distancia en KILÓMETROS desde el origen de la línea
+                        const distBusKm = puntoBusEnRuta.properties.location;
+                        const distParaderoKm = puntoParaderoEnRuta.properties.location;
+                        
+                        // Cuánto le falta al bus para llegar al paradero (en km)
+                        const distanciaFaltanteKm = distParaderoKm - distBusKm;
 
-                        // Solo procesa buses que van HACIA el paradero (no los que ya pasaron)
-                        if (distanciaRelativaKm > 0.01) { 
-                            const tramoFaltante = turf.lineSlice(puntoBusEnRuta, puntoParaderoEnRuta, rutaParaTurf);
-                            const distanciaMetros = turf.length(tramoFaltante, { units: 'meters' });
+                        // 🛡️ REGLA ORO: Si distanciaFaltanteKm es MAYOR a -0.05 significa que el camión viene HACIA el paradero.
+                        if (distanciaFaltanteKm > -0.05) {
+                            const distanciaMetrosReal = distanciaFaltanteKm * 1000;
                             
                             approachingBusesMap.set(unidadId, {
                                 id: bus.unit_number || unidadId, 
-                                distanciaMetros: distanciaMetros,
+                                distanciaMetros: distanciaMetrosReal > 0 ? distanciaMetrosReal : 0,
                                 speed: velocidadReal
                             });
                         } else {
+                            // El camión ya pasó el paradero y se está alejando. Lo eliminamos del cálculo.
                             approachingBusesMap.delete(unidadId);
                         }
                     }
-
+                    
                     const approachingBuses = Array.from(approachingBusesMap.values());
                     
                     if (approachingBuses.length > 0) {
+                        // 🚀 Ordenamos para que SIEMPRE gane el que está más cerca
                         approachingBuses.sort((a, b) => a.distanciaMetros - b.distanciaMetros);
                         const nextBus = approachingBuses[0];
                         

@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <meta name="theme-color" content="#ffffff">
+
+    <link rel="apple-touch-icon" href="images/icon-512.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -327,16 +330,77 @@ body.dark-mode .marca-flotante-top {
         </div>
     </div>
 
-    <div id="pantalla-saldo" class="pantalla-completa oculto">
-        <div class="placeholder-content">
-            <i class="ri-wallet-3-line icono-grande"></i>
-            <h2>Saldo</h2>
-            <p>Función en desarrollo.</p>
-            <span class="badge-desarrollo">Pronto</span>
+<div id="pantalla-saldo" class="pantalla-completa oculto" 
+        style="
+            display: block; 
+            padding-top: 90px; 
+            padding-bottom: 120px; /* 🚀 Espacio extra para el scroll */
+            overflow-y: auto;      /* 🚀 Activa el scroll (Slicer) cuando la cámara empuja */
+            height: 100%; 
+            box-sizing: border-box;
+            background-color: var(--secondary-bg);
+            text-align: center;
+        ">
+        
+        <h2 style="color: var(--text-color); margin-bottom: 5px; font-size: 1.8em;">Mi Tarjeta Virtual</h2>
+        <p style="color: #666; margin-top: 0;">Escanea tu QR oficial para vincular</p>
+
+        <div style="margin: 15px auto; width: 85%; max-width: 350px;">
+            <select id="select-tipo-tarjeta" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #ccc; font-size: 1em; background: white;">
+                <option value="general">Pasaje General</option>
+                <option value="estudiante">Estudiante</option>
+                <option value="discapacidad">Discapacidad</option>
+                <option value="inapam">INAPAM (Adulto Mayor)</option>
+            </select>
+        </div>
+
+        <div id="tarjeta-virtual-ui" class="card-suscripcion" 
+            style="
+                background: linear-gradient(135deg, #8B1F41, #5c1120); 
+                margin: 0 auto 20px auto; 
+                width: 85%; 
+                max-width: 350px; 
+                border-radius: 20px; 
+                padding: 30px 20px; 
+                color: white;
+                box-shadow: 0 15px 35px rgba(139, 31, 65, 0.4); 
+                position: relative;
+                overflow: hidden;
+                transition: background 0.4s ease, box-shadow 0.4s ease;
+            ">
+            
+            <i class="ri-wifi-line" style="position: absolute; top: 15px; right: 20px; font-size: 1.5em; opacity: 0.8; transform: rotate(90deg);"></i>
+            <div id="etiqueta-tipo-tarjeta" style="position: absolute; bottom: 15px; right: 20px; font-weight: bold; font-size: 0.8em; opacity: 0.8; text-transform: uppercase;">GENERAL</div>
+            
+            <p style="margin: 0; font-size: 1.1em; opacity: 0.9; text-align: left;">Saldo Disponible</p>
+            <h1 id="ui-saldo-virtual" style="font-size: 3.5em; margin: 10px 0; text-align: left;">$0.00</h1>
+            <p style="margin: 0; font-size: 0.85em; opacity: 0.7; text-align: left;" id="ui-id-tarjeta">ID: SIN VINCULAR</p>
+        </div>
+
+        <button id="btn-escanear-qr" class="btn-primario" style="background: #111; color: white; padding: 12px 25px; border-radius: 50px; font-size: 1em; margin-bottom: 20px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
+            <i class="ri-qr-code-line" style="vertical-align: middle; font-size: 1.2em; margin-right: 5px;"></i> Escanear Tarjeta Física
+        </button>
+
+        <button id="btn-desvincular-qr" class="btn-secundario" style="display: none; background: #dc3545; color: white; padding: 12px 25px; border-radius: 50px; font-size: 1em; margin-bottom: 20px; border: none; box-shadow: 0 4px 10px rgba(220,53,69,0.3);">
+            <i class="ri-delete-bin-line" style="vertical-align: middle; font-size: 1.2em; margin-right: 5px;"></i> Desvincular Tarjeta
+        </button>
+
+        <div id="contenedor-escaner" style="display: none; width: 100%; max-width: 350px; margin: 0 auto; border-radius: 15px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+            <div id="lector-qr" style="width: 100%;"></div>
+            <button id="btn-cerrar-escaner" style="width: 100%; padding: 15px; background: #dc3545; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 1.1em;">Cancelar Escaneo</button>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: center; padding: 0 20px; margin-top: 15px; flex-wrap: wrap;">
+            <button id="btn-recargar-demo" class="btn-primario" style="background: #28a745; flex: 1; min-width: 140px; padding: 12px; font-size: 1em; border-radius: 12px;">
+                <i class="ri-add-line"></i> Sumar $50
+            </button>
+            <button id="btn-fijar-saldo" class="btn-primario" style="background: #E69500; flex: 1; min-width: 140px; padding: 12px; font-size: 1em; border-radius: 12px;">
+                <i class="ri-edit-2-line"></i> Saldo Real
+            </button>
         </div>
     </div>
 
-    <div id="pantalla-recargas" class="pantalla-completa oculto" 
+<div id="pantalla-recargas" class="pantalla-completa oculto" 
         style="
             display: block; /* Importante para el scroll */
             padding-top: 90px; 
@@ -348,8 +412,8 @@ body.dark-mode .marca-flotante-top {
         ">
         
         <div style="text-align: center; margin-bottom: 25px; padding: 0 20px;">
-            <h2 style="color: var(--text-color); margin-bottom: 8px; font-size: 1.8em;">Suscripciones</h2>
-            <p style="color: #666; margin: 0; font-size: 1em;">Apoya el proyecto y desbloquea funciones.</p>
+            <h2 style="color: var(--text-color); margin-bottom: 8px; font-size: 1.8em;">Apoya el Proyecto</h2>
+            <p style="color: #666; margin: 0; font-size: 1em;">Rutas Koox es y siempre será 100% gratuita.</p>
         </div>
 
         <div class="card-suscripcion" 
@@ -369,67 +433,87 @@ body.dark-mode .marca-flotante-top {
             <div style="
                 position: absolute; 
                 top: 0; right: 0; 
-                background: #FFD700; 
-                color: #333; 
+                background: #4CAF50; 
+                color: white; 
                 font-weight: 800; 
                 font-size: 0.65em; 
                 padding: 6px 12px; 
                 border-bottom-left-radius: 12px;
                 letter-spacing: 0.5px;
             ">
-                MEJOR VALOR
+                APOYO VOLUNTARIO
             </div>
 
-            <div style="text-align: center; margin-bottom: 25px;">
-                <div style="font-size: 3.5em; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">🌟</div>
-                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.4em;">Plan Padrino</h3>
-                <div style="font-size: 3em; font-weight: 800; color: var(--text-color); margin: 5px 0; letter-spacing: -1px;">
-                    $29 <span style="font-size: 0.4em; font-weight: normal; color: #888; vertical-align: middle;">MXN</span>
-                </div>
-                <p style="color: #888; font-size: 0.9em; margin: 0; font-weight: 500;">Pago único por 3 meses</p>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="font-size: 3.5em; margin-bottom: 10px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">❤️</div>
+                <h3 style="margin: 0; color: var(--primary-color); font-size: 1.4em;">Desarrollo Independiente</h3>
+                <p style="color: #666; font-size: 0.95em; margin: 15px 0; line-height: 1.5;">
+                    Soy un desarrollador independiente. Tu donación me ayuda a pagar los servidores y mantener la app libre de anuncios para todo Campeche.
+                </p>
             </div>
 
-            <ul style="list-style: none; padding: 0; margin: 0 auto 30px auto; color: var(--text-color); text-align: left; width: fit-content;">
+            <ul style="list-style: none; padding: 0; margin: 0 auto 25px auto; color: var(--text-color); text-align: left; width: fit-content;">
                 <li style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px; font-size: 0.95em;">
-                    <i class="ri-checkbox-circle-fill" style="color: #4CAF50; font-size: 1.3em;"></i> Navegación GPS Guiada
+                    <i class="ri-server-fill" style="color: #0056b3; font-size: 1.3em;"></i> Mantienes los servidores vivos
                 </li>
                 <li style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px; font-size: 0.95em;">
-                    <i class="ri-checkbox-circle-fill" style="color: #4CAF50; font-size: 1.3em;"></i> Alertas de Bajada
+                    <i class="ri-star-smile-fill" style="color: #FFD700; font-size: 1.3em;"></i> App 100% gratis para todos
                 </li>
                 <li style="margin-bottom: 0; display: flex; align-items: center; gap: 12px; font-size: 0.95em;">
-                    <i class="ri-heart-fill" style="color: #E91E63; font-size: 1.3em;"></i> Apoyo al Desarrollador
+                    <i class="ri-rocket-2-fill" style="color: #E91E63; font-size: 1.3em;"></i> Impulsas nuevas funciones
                 </li>
             </ul>
 
-            <a href="https://buy.stripe.com/test_4gM7sEbSSdvU2tTbkT8og00" target="_blank" 
-            style="
-                    display: block; 
-                    background: linear-gradient(135deg, var(--primary-color), #0056b3); 
-                    color: white; 
-                    text-align: center; 
-                    padding: 16px; 
-                    border-radius: 50px; 
-                    text-decoration: none; 
-                    font-weight: 700; 
-                    font-size: 1.1em; 
-                    box-shadow: 0 8px 20px rgba(0,123,255,0.3); 
-                    transition: transform 0.2s;
-            "
-            onmousedown="this.style.transform='scale(0.96)'"
-            onmouseup="this.style.transform='scale(1)'">
-                Suscribirme Ahora
-            </a>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <a href="https://mpago.la/18Pe8nx" target="_blank" 
+                style="
+                        display: block; 
+                        background: linear-gradient(135deg, #E69500, #FFB300); 
+                        color: white; 
+                        text-align: center; 
+                        padding: 14px; 
+                        border-radius: 50px; 
+                        text-decoration: none; 
+                        font-weight: 700; 
+                        font-size: 1.05em; 
+                        box-shadow: 0 6px 15px rgba(230, 149, 0, 0.3); 
+                        transition: transform 0.2s;
+                "
+                onmousedown="this.style.transform='scale(0.96)'"
+                onmouseup="this.style.transform='scale(1)'">
+                    ☕ Invítame un café ($20)
+                </a>
+
+                <a href="https://mpago.la/21TzJNq" target="_blank" 
+                style="
+                        display: block; 
+                        background: linear-gradient(135deg, #28a745, #20c997); 
+                        color: white; 
+                        text-align: center; 
+                        padding: 14px; 
+                        border-radius: 50px; 
+                        text-decoration: none; 
+                        font-weight: 700; 
+                        font-size: 1.05em; 
+                        box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3); 
+                        transition: transform 0.2s;
+                "
+                onmousedown="this.style.transform='scale(0.96)'"
+                onmouseup="this.style.transform='scale(1)'">
+                    🌮 Invítame unos tacos ($50)
+                </a>
+            </div>
             
             <p style="text-align: center; font-size: 0.75em; color: #999; margin-top: 18px; line-height: 1.4;">
-                <i class="ri-lock-2-line" style="vertical-align: text-bottom;"></i> Pago seguro vía Stripe.<br>
-                <a href="#" style="color: #999; text-decoration: underline;">Cancelar cuando quieras</a>
+                <i class="ri-shield-check-fill" style="vertical-align: text-bottom;"></i> Pago único y seguro.<br>
+                Sin cobros automáticos.
             </p>
         </div>
 
         <div style="text-align: center; padding: 0 20px 20px 20px;">
-            <p style="color: #888; font-size: 0.9em; margin-bottom: 5px;">¿Dudas?</p>
-            <a href="mailto:soporte@rutaskoox.com" style="color: var(--primary-color); font-weight: 600; text-decoration: none; font-size: 0.95em;">
-                Contactar Soporte
+            <p style="color: #888; font-size: 0.9em; margin-bottom: 5px;">¿Tienes sugerencias o dudas?</p>
+            <a href="mailto:contacto@rutaskoox.com" style="color: var(--primary-color); font-weight: 600; text-decoration: none; font-size: 0.95em;">
+                Escríbeme
             </a>
         </div>
     </div>
@@ -531,6 +615,7 @@ body.dark-mode .marca-flotante-top {
             if(e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) { return false; }
         }
     </script>
+    <script src="https://unpkg.com/html5-qrcode" defer></script>
 
 </body>
 </html>

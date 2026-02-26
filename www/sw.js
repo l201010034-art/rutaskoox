@@ -1,7 +1,5 @@
-// www/sw.js...
-
-const CACHE_VERSION = 'v5.23'; 
-const CACHE_NAME = `rutas-1oox-cache-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v5.26'; // Subimos una versión para forzar la actualización
+const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`; // Corregí un pequeño typo de '1oox' a 'koox'
 
 const APP_SHELL_URLS = [
     './',
@@ -19,7 +17,10 @@ const APP_SHELL_URLS = [
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
     'https://unpkg.com/@turf/turf@6/turf.min.js',
     'https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css',
-    'https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js'
+    'https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js',
+    
+    // 🚀 NUEVO: Guardamos el escáner en la memoria del celular
+    'https://unpkg.com/html5-qrcode' 
 ];
 
 self.addEventListener('install', (event) => {

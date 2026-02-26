@@ -1,112 +1,68 @@
-// www/js/subscriptionService.js
+// js/subscriptionService.js
 
-import { getUsuario } from './authService.js';
-
-let esPremium = false; // Estado local por defecto
-
-export async function verificarEstadoPremium(uid) {
-    if (!uid) {
-        esPremium = false;
-        actualizarUIPremium(false);
-        return false;
-    }
-
-    try {
-        console.log("🔍 Verificando suscripción para:", uid);
-        // 1. Instanciamos Firestore AQUÍ dentro
-        const db = firebase.firestore();
-        
-        const doc = await db.collection('suscripciones').doc(uid).get();
-        
-        if (doc.exists) {
-            const data = doc.data();
-            const ahora = new Date();
-            const fechaExpiracion = data.fechaExpiracion ? data.fechaExpiracion.toDate() : null;
-
-            if (fechaExpiracion && fechaExpiracion > ahora) {
-                esPremium = true;
-                console.log("🌟 USUARIO PREMIUM CONFIRMADO. Vence:", fechaExpiracion.toLocaleDateString());
-                actualizarUIPremium(true);
-                return true;
-            }
-        }
-    } catch (error) {
-        console.error("⚠️ Error consultando suscripción:", error);
-    }
-    
-    console.log("👤 Usuario Gratuito");
-    esPremium = false;
-    actualizarUIPremium(false);
-    return false;
-}
-
+// Todo el mundo es "Premium" ahora, la app es gratis.
 export function isUserPremium() {
-    return esPremium;
+    return true; 
 }
 
-function actualizarUIPremium(activo) {
-    const badge = document.getElementById('badge-premium-menu');
-    if (badge) {
-        badge.style.display = activo ? 'inline-block' : 'none';
-    }
+// Transformamos tu antigua validación
+export async function verificarEstadoPremium(uid) {
+    // Ya no bloqueamos nada en la base de datos, 
+    // pero puedes dejar esta función vacía para que no rompa app.js
+    console.log("Modo comunitario: Todas las funciones gratuitas activadas.");
 }
 
+// Transformamos el antiguo paywall en un modal amigable de donación
 export function mostrarMensajeIndie() {
-    const modal = document.getElementById('info-modal');
-    if (!modal) return;
-
-    let contenido = modal.querySelector('.modal-content');
+    // Verificamos si el modal ya existe, si no, lo inyectamos
+    let modal = document.getElementById('modal-donacion');
     
-    contenido.innerHTML = `
-        <div style="padding: 20px; text-align: center; position: relative;">
-            <span id="btnCerrarIndieX" style="position: absolute; right: 10px; top: 10px; font-size: 24px; cursor: pointer; color:#666;">&times;</span>
-            
-            <div style="font-size: 50px; margin-bottom: 10px;">👨‍💻</div>
-            <h3 style="color: var(--primary-color); margin-top: 0;">Apoya a Rutas Ko'ox</h3>
-            
-            <p style="text-align: left; font-size: 0.95em; color: #555; line-height: 1.5;">
-                Hola, soy <strong>Alexis</strong>, desarrollador independiente de Campeche. 
-                Esta app se mantiene gracias al apoyo de usuarios como tú, no de grandes empresas.
-            </p>
-            
-            <div style="background: #e3f2fd; padding: 15px; border-radius: 12px; margin: 20px 0; border: 1px solid #bbdefb;">
-                <h4 style="margin: 0; color: #0d47a1; font-size: 1.1em;">Suscripción PRO</h4>
-                <div style="font-size: 2.2em; font-weight: 800; color: #1565c0; margin: 5px 0;">$29 <small style="font-size: 0.4em; color: #555;">MXN / Trimestre</small></div>
-                <p style="margin:0; font-size: 0.8em; color: #0d47a1;">(Menos de 35 centavos al día)</p>
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-donacion';
+        modal.className = 'modal-overlay'; // Asumiendo que usas tu clase CSS habitual
+        modal.innerHTML = `
+            <div class="modal-content" style="text-align: center; max-width: 400px; padding: 25px; border-radius: 15px; background: white;">
+                <h2 style="color: #0056b3; margin-top: 0;">¡Rutas Koox es 100% Gratis! 🎉</h2>
+                <p style="color: #444; font-size: 0.95em; line-height: 1.5;">
+                    Decidí liberar todas las funciones avanzadas (como la navegación GPS y el escáner) para que todo Campeche pueda moverse mejor.
+                </p>
+                <p style="color: #444; font-size: 0.95em; line-height: 1.5;">
+                    Este proyecto es independiente y lo desarrollo yo solo sin apoyo de ninguna institución. Si la app te ha salvado de perderte, <strong>puedes apoyarme con una donación voluntaria</strong> para pagar los servidores.
+                </p>
+                <div style="margin-top: 25px; display: flex; flex-direction: column; gap: 10px;">
+                    <button id="btn-donar-cafe" class="btn-primario" style="background-color: #E69500; font-size: 1.1em; padding: 12px;">
+                        ☕ Invítame un café ($20)
+                    </button>
+                    <button id="btn-donar-kilo" class="btn-primario" style="background-color: #28a745; font-size: 1.1em; padding: 12px;">
+                        🌮 Invítame unos tacos ($50)
+                    </button>
+                    <button id="btn-cerrar-donacion" class="btn-secundario" style="background: none; color: #666; border: none; padding: 10px; margin-top: 5px;">
+                        Quizás después, gracias
+                    </button>
+                </div>
             </div>
+        `;
+        document.body.appendChild(modal);
 
-            <ul style="text-align: left; font-size: 0.95em; margin-bottom: 25px; list-style: none; padding: 0;">
-                <li style="margin-bottom: 8px;">✅ <strong>Navegación GPS</strong> en tiempo real</li>
-                <li style="margin-bottom: 8px;">✅ <strong>Alertas de bajada</strong> (no te duermas)</li>
-                <li style="margin-bottom: 8px;">❤️ <strong>Apoyas</strong> el mantenimiento del servidor</li>
-            </ul>
+        // Los listeners de los botones
+        document.getElementById('btn-cerrar-donacion').addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
 
-            <button id="btnIrAPagar" class="btn-primario-full" style="background-color: #00c853; font-size: 1.1em; margin-bottom: 10px;">
-                🚀 Apoyar y Activar Premium
-            </button>
-            
-            <button id="btnCerrarIndie" style="background: none; border: none; color: #777; text-decoration: underline; cursor: pointer; padding: 10px;">
-                No por ahora, usar versión gratuita
-            </button>
-        </div>
-    `;
+        document.getElementById('btn-donar-cafe').addEventListener('click', () => {
+            // Aquí pones tu link de MercadoPago, Stripe o PayPal de $20
+            window.open('https://link.mercadopago.com.mx/tu-link-de-20', '_blank');
+            modal.style.display = 'none';
+        });
 
-    modal.classList.remove('oculto');
+        document.getElementById('btn-donar-kilo').addEventListener('click', () => {
+            // Aquí pones tu link de $50
+            window.open('https://link.mercadopago.com.mx/tu-link-de-50', '_blank');
+            modal.style.display = 'none';
+        });
+    }
 
-    document.getElementById('btnIrAPagar').addEventListener('click', () => {
-        modal.classList.add('oculto');
-        if (window.app && window.app.irASeccionRecargas) {
-            window.app.irASeccionRecargas();
-        } else {
-            alert("Ve a la sección 'Recargas' en el menú inferior.");
-        }
-    });
-
-    const cerrar = () => {
-        modal.classList.add('oculto');
-        setTimeout(() => window.location.reload(), 300); 
-    };
-
-    document.getElementById('btnCerrarIndie').addEventListener('click', cerrar);
-    document.getElementById('btnCerrarIndieX').addEventListener('click', cerrar);
+    // Mostramos el modal
+    modal.style.display = 'flex';
 }
