@@ -88,43 +88,13 @@ function encontrarBusAmenosDe15Metros(userPunto) {
 export function updatePosition(puntoUsuario, speed) {
     if (!puntoUsuario || !puntoUsuario.geometry || !puntoUsuario.geometry.coordinates) return null;
 
-    // 🚀 1. TRADUCCIÓN DE VARIABLES (Arregla el ReferenceError)
-    // Convertimos de m/s a km/h. Si speed es null, usamos 0.
     const speedKmH = (speed || 0) * 3.6; 
-    // puntoUsuario ya es un GeoJSON válido para Turf
-    const userPunto = puntoUsuario; 
     
-    // 2. AVISO AL MONEDERO
+    // 2. AVISO AL MONEDERO (Para liberar el candado al bajarse)
     reportarVelocidadUsuario(speedKmH);
 
-    // 3. LÓGICA DE ABORDAJE (Solo si vamos a más de 12 km/h y NO estamos anclados ya a un bus)
-    if (speedKmH > 12 && !estadoFisico.ancladoAUnidad) {
-        
-        // Buscamos a los camiones reales dibujados en tu mapa
-        const busCercano = encontrarBusAmenosDe15Metros(userPunto); 
+    // --- LA LÓGICA DE ABORDAJE FUE TRASLADADA A APP.JS PARA EVITAR CONFLICTOS ---
 
-        if (busCercano) {
-            if (busCandidatoAnterior === busCercano.unit_id) {
-                // Sigue siendo el mismo bus. Aumentamos el contador (asumimos ~3 segs por ping)
-                tiempoCercaDelBus += 3; 
-                
-                if (tiempoCercaDelBus >= 10) {
-                    console.log(`🚌 Confirmado abordaje en ${busCercano.unit_id}. Procesando pago...`);
-                    procesarAbordaje(busCercano.rutaId, busCercano.unit_id);
-                    tiempoCercaDelBus = 0; 
-                    busCandidatoAnterior = null;
-                }
-            } else {
-                busCandidatoAnterior = busCercano.unit_id;
-                tiempoCercaDelBus = 0; 
-            }
-        } else {
-            busCandidatoAnterior = null;
-            tiempoCercaDelBus = 0;
-        }
-    }
-
-    // --- CONTINÚA TU LÓGICA DE NAVEGACIÓN ORIGINAL ---
     if (!puntoDePartida || !ultimoCheck || !ultimaPosicion) {
         return null;
     }

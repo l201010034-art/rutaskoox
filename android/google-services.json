@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "332778953247",
+    "firebase_url": "https://rutaskoox-alertas-default-rtdb.firebaseio.com",
+    "project_id": "rutaskoox-alertas",
+    "storage_bucket": "rutaskoox-alertas.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:332778953247:android:ee2af2cf3ee77d12b1932a",
+        "android_client_info": {
+          "package_name": "rkooxcampeche.systemsla.com"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "332778953247-fh2jgd1beihlqs4fkiddrer2c3vkhadu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAL-AEQi1b5CZnYDSdVrX6QinoqOnv8ibk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "332778953247-fh2jgd1beihlqs4fkiddrer2c3vkhadu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -946,6 +946,7 @@ body.dark-mode .marca-flotante-top {
     margin-top: 0; 
 }
 
+
 /* =========================================
    ESTILOS FORZADOS PARA ESCÁNER QR
    ========================================= */
@@ -957,8 +958,7 @@ body.dark-mode .marca-flotante-top {
 
 #lector-qr video {
     width: 100% !important;
-    max-height: 280px !important; /* Evita que crezca hacia abajo */
-    object-fit: cover !important; /* Recorta el video sobrante como Instagram */
+    /* ELIMINADO: max-height y object-fit: cover porque ROMPEN la matriz matemática de escaneo */
     border-radius: 15px 15px 0 0 !important;
 }
 
@@ -969,6 +969,7 @@ body.dark-mode .marca-flotante-top {
     border-radius: 5px;
     width: 90%;
 }
+
 
 #nav-estado {
     display: flex;

@@ -281,6 +281,33 @@ function actualizarDisplayAlertas() {
 // --- 4. ARRANQUE DE LA APP ---
 document.addEventListener('DOMContentLoaded', async () => { 
 
+    // ==========================================
+    // 🛡️ CONTROL LEGAL Y LANZAMIENTO DEL TOUR
+    // ==========================================
+    const modalTyC = document.getElementById('modal-tyc');
+    const btnAceptarTyC = document.getElementById('btn-aceptar-tyc');
+    
+    // Verificamos si el usuario ya aceptó los términos en esta versión
+    const tycAceptados = localStorage.getItem('tyc_aceptados_koox');
+
+    if (!tycAceptados) {
+        // Bloqueamos la interfaz y mostramos los términos
+        modalTyC.classList.remove('oculto');
+        modalTyC.style.display = 'flex';
+        
+        btnAceptarTyC.addEventListener('click', () => {
+            // Guardamos el consentimiento
+            localStorage.setItem('tyc_aceptados_koox', 'true');
+            modalTyC.style.display = 'none';
+            
+            // 🚀 UNA VEZ ACEPTADO, DISPARAMOS EL TOUR DIRECTAMENTE
+            checkAndStartTour();
+        });
+    } else {
+        // Si ya los había aceptado (visitas normales), verificamos si necesita el tour
+        checkAndStartTour();
+    }
+
     // Listener para el botón de prueba
     const btnTest = document.getElementById('btnTestSimulador');
     if (btnTest) {
@@ -297,8 +324,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const infoLugarDetectado = document.getElementById('info-lugar-buscado');
     const contenedorChips = document.getElementById('contenedor-chips');
     const btnModoTurista = document.getElementById('btnModoTurista');
-const btnMinimizarPanel = document.getElementById('btnMinimizarPanel');
-const btnMinimizarNav = document.getElementById('btnMinimizarNav');
+    const btnMinimizarPanel = document.getElementById('btnMinimizarPanel');
+    const btnMinimizarNav = document.getElementById('btnMinimizarNav');
     // Asignamos todas las referencias al DOM aquí
     selectDestino = document.getElementById('selectDestino');
     inputInicio = document.getElementById('inputInicio');
@@ -636,7 +663,7 @@ if (btnBuscarLugar) {
     } catch (error) {
         console.error("Error cargando o procesando los datos GeoJSON:", error);
     }
-    checkAndStartTour();
+   // checkAndStartTour();
 
     // ⬇️⬇️ INICIALIZAR MONEDERO VIRTUAL Y ESCÁNER QR ⬇️⬇️
     const uiSaldo = document.getElementById('ui-saldo-virtual');
@@ -715,13 +742,13 @@ function actualizarInterfazTarjeta() {
     // Si cambian el select, actualizamos el color en vivo
     selectTipoTarjeta.addEventListener('change', actualizarInterfazTarjeta);
 
-    // --- LÓGICA DEL ESCÁNER QR ---
+// --- LÓGICA DEL ESCÁNER QR ---
     const btnEscanear = document.getElementById('btn-escanear-qr');
     const btnCerrarEscaner = document.getElementById('btn-cerrar-escaner');
     const contenedorEscaner = document.getElementById('contenedor-escaner');
     let scannerH5 = null;
 
-if (btnEscanear) {
+    if (btnEscanear) {
         btnEscanear.addEventListener('click', () => {
             // Aseguramos que el contenedor esté limpio antes de empezar
             document.getElementById('lector-qr').innerHTML = "";
@@ -731,10 +758,20 @@ if (btnEscanear) {
             // Inicialización limpia
             scannerH5 = new Html5Qrcode("lector-qr");
             
+            // 🚀 CONFIGURACIÓN MEJORADA PARA QR DENSOS
             const config = { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0 
+                fps: 15, // Un poco más rápido para agarrarlo al vuelo
+                // En lugar de un tamaño fijo, hacemos que la caja se adapte al tamaño de la pantalla
+                qrbox: (viewfinderWidth, viewfinderHeight) => {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    const size = Math.floor(minEdge * 0.70); // 70% del espacio disponible
+                    return { width: size, height: size };
+                },
+                // Pedimos autoenfoque continuo al celular si lo soporta
+                videoConstraints: {
+                    facingMode: "environment",
+                    focusMode: "continuous"
+                }
             };
 
             scannerH5.start(
@@ -753,7 +790,7 @@ if (btnEscanear) {
                         alert(`✅ ¡Tarjeta vinculada!\nID: ${decodedText}`);
                     }).catch(err => console.error("Error al detener:", err));
                 },
-                (errorMessage) => { /* Silenciar errores de escaneo continuo */ }
+                (errorMessage) => { /* Silenciar errores de escaneo continuo para no saturar la consola */ }
             ).catch(err => {
                 console.error("Error crítico de cámara:", err);
                 alert("No se pudo acceder a la cámara. Asegúrate de dar permisos en el navegador o en los ajustes del celular.");
@@ -1786,8 +1823,11 @@ function handleLocationUpdate(pos) {
                 const UMBRAL_DISTANCIA = 35; // 35 metros reales y verificados
                 const UMBRAL_VELOCIDAD = 8; // km/h
 
-                if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
+if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
                     const unidadId = busMasCercano.options.unidadId || (busMasCercano.getPopup().getContent().match(/Unidad (\w+)/) || [])[1];
+
+                    // 🚨 CORRECCIÓN VITAL: Inicializar el objeto SIEMPRE antes de usarlo
+                    window.candidatoAbordaje = window.candidatoAbordaje || { unidad: null, contador: 0 };
 
                     // Acumulamos tiempo para estar seguros de que no va pasando
                     if (window.candidatoAbordaje.unidad === unidadId) {
@@ -1802,6 +1842,10 @@ function handleLocationUpdate(pos) {
                         window.unidadAbordadaViajeActual = unidadId; 
                         window.candidatoAbordaje = { unidad: null, contador: 0 };
                         activarModoTransbordo(false); 
+                        
+                        // 💳 El cobro de tarjeta se hace desde aquí que tenemos la certeza topológica
+                        procesarAbordaje(rutaId, unidadId);
+
                         siguientePaso(); 
                         return; 
                     }
@@ -1861,7 +1905,7 @@ function checkProximidad(navState) {
         }
     }
 
-    // B. Paso de Bus (Monitoreo de Bajada)
+// B. Paso de Bus (Monitoreo de Bajada)
     if (paso.tipo === 'bus') {
         const distanciaMetros = turf.distance(puntoInicio, puntoDeInteres, { units: 'meters' });
         
@@ -1870,46 +1914,44 @@ function checkProximidad(navState) {
             console.log("¡Alerta! Bajas pronto.");
             alertaMostrada = true;
             
-            // ⬇️ MODIFICADO: Usa userSettings.vibration
             if (userSettings.vibration && navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
             }            
-            // ⬆️ FIN MODIFICADO
             
             instruccionActualEl.textContent = `¡BAJA PRONTO! (${puntoDeInteres.properties.nombre})`;
         }
 
         // --- 2.2 Lógica de Avance (Proyección sobre la Ruta) ---
-        
         try {
-            // Proyectar ambos puntos sobre la ruta de bus
             const puntoUsuarioEnRuta = turf.nearestPointOnLine(rutaGeoJSON, puntoInicio);
             const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaGeoJSON, puntoDeInteres);
 
-            // Obtener las ubicaciones proyectadas (distancia en km desde el inicio de la polilínea)
             const distUsuario = puntoUsuarioEnRuta.properties.location;
             const distParadero = puntoParaderoEnRuta.properties.location;
             
-            // Si el usuario está 50 metros MÁS ADELANTE que el paradero...
-            // (La diferencia se multiplica por 1000 para pasar de km a metros)
+            // Si el usuario está 40 metros MÁS ADELANTE que el paradero...
             if ((distUsuario - distParadero) * 1000 > umbralProximidadMetros) { 
                 
                 console.log("Detección de Avance: El usuario pasó el punto de bajada. Avanzando...");
                 
                 const esPasoFinal = (pasoActual === rutaCompletaPlan.length - 1);
                 
-                // Si NO es el paso final, activamos el transbordo
-                if (!esPasoFinal) {
-                    console.log("Activando contador de transbordo...");
-                    activarModoTransbordo(); 
-                    // ⬇️ MODIFICADO
-                    if (userSettings.vibration && navigator.vibrate) {
-                        navigator.vibrate([200, 100, 200, 100, 200]);
-                    }
-                    // ⬆️ FIN MODIFICADO
+                // 🚨 NUEVO: AUTO-FINALIZAR EL VIAJE SI ES LA ÚLTIMA PARADA
+                if (esPasoFinal) {
+                    console.log("🏁 ¡Destino alcanzado! Finalizando viaje automáticamente.");
+                    alert("¡Llegaste a tu destino! Gracias por viajar con Rutas Koox.");
+                    finalizarRuta();
+                    return;
                 }
                 
-                // Avanzamos al siguiente paso (o finalizamos)
+                // Si NO es el paso final, activamos el transbordo
+                console.log("Activando contador de transbordo...");
+                activarModoTransbordo(); 
+                if (userSettings.vibration && navigator.vibrate) {
+                    navigator.vibrate([200, 100, 200, 100, 200]);
+                }
+                
+                // Avanzamos al siguiente paso
                 siguientePaso();
                 return;
             }
@@ -2521,19 +2563,37 @@ function mostrarInfoETA(info) {
  * @param {string} filtroRutaId - El ID de la ruta que queremos ver (ej. 'koox-06')
  * @param {object} paraderoDeInteres - El paradero GeoJSON donde esperamos el bus
  */
+
+
+export let rutaEscuchaActual = null;
+export let paraderoInteresActual = null;
+export let paraderosMasivosActuales = null;
+
 /**
- * (ACTUALIZADO - VERSIÓN VINDEN DIRECTO) 
- * Inicia la escucha de buses saltándose Firebase
+ * (ACTUALIZADO - TRANSICIÓN SUAVE) 
+ * Inicia la escucha de buses o actualiza el objetivo si es la misma ruta
  */
 export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMasivos = null) {
-    // 1. Limpiamos conexiones previas
+    // 🛡️ TRANSICIÓN SUAVE: Si es la MISMA ruta, no desconectamos el satélite, solo cambiamos la meta
+    if (socketVinden && socketVinden.connected && rutaEscuchaActual === filtroRutaId) {
+        console.log(`🔄 Transición suave: Manteniendo escucha de ${filtroRutaId}, actualizando ETA a: ${paraderoDeInteres?.properties?.nombre || 'Múltiples'}`);
+        paraderoInteresActual = paraderoDeInteres;
+        paraderosMasivosActuales = paraderosMasivos;
+        limpiarETAs(); // Limpiamos los números viejos de la pantalla
+        return; 
+    }
+
+    // Si es una ruta DIFERENTE, limpiamos conexiones previas y empezamos de cero
     detenerEscuchaBuses(); 
     
+    rutaEscuchaActual = filtroRutaId;
+    paraderoInteresActual = paraderoDeInteres;
+    paraderosMasivosActuales = paraderosMasivos;
+
     if (filtroRutaId) {
         iniciarMotorInteligente(filtroRutaId); 
     }
 
-    // 2. Buscamos el ID de Vinden (usando el automático puro)
     const idVinden = obtenerIdVinden(filtroRutaId);
 
     if (!idVinden) {
@@ -2542,41 +2602,33 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
         return;
     }
 
-    console.log(`📡 Iniciando conexión directa a Vinden para ruta: ${filtroRutaId} (ID Vinden: ${idVinden})`);
+    console.log(`📡 Iniciando conexión a Vinden para ruta: ${filtroRutaId}`);
 
-    // 3. Conectamos al WebSocket de Vinden
     if (!socketVinden) {
         socketVinden = io('wss://socketio.campeche.vinden.cloud/app', {
             transports: ['websocket'],
-            query: { r: '977', EIO: '3', transport: 'websocket' } // Puerto de enlace
+            query: { r: '977', EIO: '3', transport: 'websocket' }
         });
         
         socketVinden.on('connect', () => {
-            console.log('✅ Conectado al satélite Vinden');
             socketVinden.emit('change-route', idVinden);
         });
     } else {
-        // Si ya está conectado, solo cambiamos de canal
         socketVinden.emit('change-route', idVinden);
     }
 
     const rutaGeoJSON = todasLasRutas.find(r => r.properties.id === filtroRutaId);
     
-    // 💡 SOLUCIÓN AL ERROR TURF.JS: "Aplanar" MultiLineString a LineString
     let rutaParaTurf = rutaGeoJSON;
     if (rutaGeoJSON && rutaGeoJSON.geometry && rutaGeoJSON.geometry.type === 'MultiLineString') {
         try {
-            // Unimos todos los fragmentos en una sola línea continua
             const coordenadasUnidas = rutaGeoJSON.geometry.coordinates.flat();
             rutaParaTurf = turf.lineString(coordenadasUnidas);
-        } catch (e) {
-            console.warn("No se pudo aplanar la ruta para el cálculo de ETA.");
-        }
+        } catch (e) {}
     }
     
     let approachingBusesMap = new Map(); 
 
-// 4. El Radar Interceptor (La Magia + Invisibilidad)
     const originalOnEvent = socketVinden.onevent;
     socketVinden.onevent = function (packet) {
         const args = packet.data || [];
@@ -2591,7 +2643,6 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                 const speedKmH = parseFloat(bus.speed) || 0;
                 const velocidadReal = bus.status === 5 ? 0 : (speedKmH / 3.6); 
 
-// --- 🛡️ INICIO GEOCERCA Y ETA MASIVO 🛡️ ---
                 let busVisible = true;
                 const busPunto = turf.point([lng, lat]);
 
@@ -2601,51 +2652,36 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
 
                 if (busVisible) {
                     actualizarMarcadorBus(bus, filtroRutaId);
-                    
-                    // 🧠 Alimentamos el motor con el latido de este camión
-                    // Ahora le mandamos la velocidad matemática corregida
                     registrarLatidoBusMotor(unidadId, bus.velocidadCalculada, filtroRutaId);
                     
-                    // ⏱️ ETA MASIVO
-                    if (paraderosMasivos && paraderosMasivos.length > 0) {
-                        procesarETAMasivo(bus, busPunto, rutaParaTurf, paraderosMasivos, filtroRutaId);
+                    if (paraderosMasivosActuales && paraderosMasivosActuales.length > 0) {
+                        procesarETAMasivo(bus, busPunto, rutaParaTurf, paraderosMasivosActuales, filtroRutaId);
                     }
                 } else {
                     removerMarcadorBus(unidadId); 
                     originalOnEvent.call(this, packet);
                     return; 
                 }
-                // --- 🛡️ FIN GEOCERCA Y ETA MASIVO 🛡️ ---
 
-// 5. CÁLCULO DE ETA (CON FILTRO DE SENTIDO TOPOLÓGICO)
-                if (paraderoDeInteres && rutaParaTurf) {
+                // CÁLCULO DE ETA (Usando la variable global: paraderoInteresActual)
+                if (paraderoInteresActual && rutaParaTurf) {
                     let enViaje = (rutaCompletaPlan && rutaCompletaPlan[pasoActual] && rutaCompletaPlan[pasoActual].tipo === 'bus');
                     
-                    // Si ya vamos a bordo de la U081, ignoramos por completo a las demás unidades
                     if (enViaje && window.unidadAbordadaViajeActual && window.unidadAbordadaViajeActual !== unidadId) {
                         approachingBusesMap.delete(unidadId);
                     } else {
                         const puntoBusEnRuta = turf.nearestPointOnLine(rutaParaTurf, busPunto);
-                        const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, paraderoDeInteres.geometry.coordinates);
+                        const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, paraderoInteresActual.geometry.coordinates);
                         
-                        // 'location' devuelve la distancia en KILÓMETROS desde el origen de la línea
-                        const distBusKm = puntoBusEnRuta.properties.location;
-                        const distParaderoKm = puntoParaderoEnRuta.properties.location;
-                        
-                        // Cuánto le falta al bus para llegar al paradero (en km)
-                        const distanciaFaltanteKm = distParaderoKm - distBusKm;
+                        const distanciaFaltanteKm = puntoParaderoEnRuta.properties.location - puntoBusEnRuta.properties.location;
 
-                        // 🛡️ REGLA ORO: Si distanciaFaltanteKm es MAYOR a -0.05 significa que el camión viene HACIA el paradero.
                         if (distanciaFaltanteKm > -0.05) {
-                            const distanciaMetrosReal = distanciaFaltanteKm * 1000;
-                            
                             approachingBusesMap.set(unidadId, {
                                 id: bus.unit_number || unidadId, 
-                                distanciaMetros: distanciaMetrosReal > 0 ? distanciaMetrosReal : 0,
+                                distanciaMetros: (distanciaFaltanteKm * 1000 > 0) ? (distanciaFaltanteKm * 1000) : 0,
                                 speed: velocidadReal
                             });
                         } else {
-                            // El camión ya pasó el paradero y se está alejando. Lo eliminamos del cálculo.
                             approachingBusesMap.delete(unidadId);
                         }
                     }
@@ -2653,7 +2689,6 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                     const approachingBuses = Array.from(approachingBusesMap.values());
                     
                     if (approachingBuses.length > 0) {
-                        // 🚀 Ordenamos para que SIEMPRE gane el que está más cerca
                         approachingBuses.sort((a, b) => a.distanciaMetros - b.distanciaMetros);
                         const nextBus = approachingBuses[0];
                         
@@ -2678,22 +2713,25 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
 }
 
 /**
- * ⏱️ INICIA ESCUCHA MULTIHILO (Para Paraderos Cercanos)
- * Escucha múltiples rutas simultáneamente y calcula el ETA para varios paraderos.
+ * ⏱️ INICIA ESCUCHA MULTIHILO (El Cerebro Unificado)
+ * Escucha múltiples rutas simultáneamente sin desconectarse.
+ * Alimenta tanto el mapa como el panel principal (HUD) de navegación.
  */
 export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
-    detenerEscuchaBuses(); // Limpia sockets y mapa previos
+    // Solo se limpia todo al arrancar la ruta, NUNCA durante los pasos
+    detenerEscuchaBuses(); 
     if (rutasIds && rutasIds.length > 0) {
         iniciarMotorInteligente(rutasIds);
     }
 
     const paraderosLimpios = paraderosDeInteres.map(item => item.paradero ? item.paradero : item);
+    busesCercanosHUD.clear(); 
 
     rutasIds.forEach((rutaId, index) => {
         const idVinden = obtenerIdVinden(rutaId);
         if (!idVinden) return;
 
-        // Escalonamos la conexión (300ms) para no ahogar la red del celular
+        // Escalonamos la conexión (300ms) para no ahogar la red celular
         setTimeout(() => {
             const unSocket = io('wss://socketio.campeche.vinden.cloud/app', {
                 transports: ['websocket'],
@@ -2705,7 +2743,6 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
                 unSocket.emit('change-route', idVinden);
             });
 
-            // Aplanamos la ruta para la matemática de Turf.js
             const rutaGeoJSON = todasLasRutas.find(r => r.properties.id === rutaId);
             let rutaParaTurf = rutaGeoJSON;
             if (rutaGeoJSON && rutaGeoJSON.geometry && rutaGeoJSON.geometry.type === 'MultiLineString') {
@@ -2723,9 +2760,10 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
                         const bus = JSON.parse(args[1].data);
                         const lat = parseFloat(bus.latlng[0]);
                         const lng = parseFloat(bus.latlng[1]);
-                        const unidadId = bus.unit_id; // ⬅️ FALTABA ESTO
-                        
-                        // 🛡️ Filtro de Privacidad
+                        const unidadId = bus.unit_id; 
+                        const speedKmH = parseFloat(bus.speed) || 0;
+                        const velocidadReal = bus.status === 5 ? 0 : (speedKmH / 3.6); 
+
                         const busPunto = turf.point([lng, lat]);
                         let busVisible = true;
                         if (rutaParaTurf) {
@@ -2733,17 +2771,60 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
                         }
 
                         if (busVisible) {
-                            // 🔥 CORRECCIÓN: Ahora le pasamos el objeto 'bus' completo
                             actualizarMarcadorBus(bus, rutaId);
-                            // Ahora le mandamos la velocidad matemática corregida
-                            registrarLatidoBusMotor(unidadId, bus.velocidadCalculada, rutaId);      
+                            registrarLatidoBusMotor(unidadId, speedKmH, rutaId);      
 
-                            // ⏱️ ETA MASIVO
+                            // 1. ETA MASIVO (Para paraderos en el mapa)
                             if (paraderosLimpios.length > 0 && rutaParaTurf) {
                                 procesarETAMasivo(bus, busPunto, rutaParaTurf, paraderosLimpios, rutaId);
                             }
+
+                            // 2. 🎯 CÁLCULO DE ETA PRINCIPAL (Panel superior de navegación)
+                            if (enfoqueNavegacion && enfoqueNavegacion.rutaId === rutaId && enfoqueNavegacion.paradero && rutaParaTurf) {
+                                
+                                let enViaje = (rutaCompletaPlan && rutaCompletaPlan[pasoActual] && rutaCompletaPlan[pasoActual].tipo === 'bus');
+
+                                if (enViaje && window.unidadAbordadaViajeActual && window.unidadAbordadaViajeActual !== unidadId) {
+                                    busesCercanosHUD.delete(unidadId); // Ignoramos camiones que no abordaste
+                                } else {
+                                    const puntoBusEnRuta = turf.nearestPointOnLine(rutaParaTurf, busPunto);
+                                    const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, enfoqueNavegacion.paradero.geometry.coordinates);
+
+                                    const distanciaFaltanteKm = puntoParaderoEnRuta.properties.location - puntoBusEnRuta.properties.location;
+
+                                    if (distanciaFaltanteKm > -0.05) {
+                                        const distanciaMetrosReal = distanciaFaltanteKm * 1000;
+                                        busesCercanosHUD.set(unidadId, {
+                                            id: bus.unit_number || unidadId,
+                                            distanciaMetros: distanciaMetrosReal > 0 ? distanciaMetrosReal : 0,
+                                            speed: velocidadReal
+                                        });
+                                    } else {
+                                        busesCercanosHUD.delete(unidadId); // El camión ya pasó
+                                    }
+                                }
+
+                                // Refrescar Panel
+                                const approachingBuses = Array.from(busesCercanosHUD.values());
+                                if (approachingBuses.length > 0) {
+                                    approachingBuses.sort((a, b) => a.distanciaMetros - b.distanciaMetros);
+                                    const nextBus = approachingBuses[0];
+
+                                    let etaMinutos = null;
+                                    if (nextBus.speed > 1.0) {
+                                        etaMinutos = Math.round((nextBus.distanciaMetros / nextBus.speed) / 60);
+                                    }
+
+                                    mostrarInfoETA({
+                                        id: nextBus.id,
+                                        etaMinutos: etaMinutos,
+                                        distanciaMetros: nextBus.distanciaMetros
+                                    });
+                                }
+                            }
                         } else {
-                            removerMarcadorBus(unidadId); // ⬅️ CORREGIDO
+                            removerMarcadorBus(unidadId); 
+                            busesCercanosHUD.delete(unidadId);
                         }
                     } catch (e) {}
                 }
@@ -2756,42 +2837,44 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
     });
 }
 
+// 🧠 Variables para el enfoque del HUD (Head-Up Display) sin matar sockets
+export let enfoqueNavegacion = { rutaId: null, paradero: null };
+export let busesCercanosHUD = new Map();
+
 /**
- * (ACTUALIZADO) Revisa el paso actual y decide si debe
- * iniciar la escucha de buses (y para dónde).
+ * (ACTUALIZADO) Revisa el paso actual y decide en qué ruta y paradero
+ * enfocarse para mostrar el ETA en el panel principal, ¡SIN matar los sockets!
  */
 function llamarEscuchaParaPaso(indicePaso) {
-    // 1. Detenemos cualquier escucha anterior para no mezclar rutas
-    detenerEscuchaBuses(); 
-
     const paso = rutaCompletaPlan[indicePaso];
     if (!paso) return;
 
-    // 2. CASO A: Caminando hacia el paradero o esperando un transbordo
+    // Limpiamos la pantalla del HUD del paso anterior para recibir los nuevos cálculos
+    busesCercanosHUD.clear();
+    mostrarInfoETA(null);
+
+    // CASO A: Caminando hacia el paradero o esperando un transbordo
     if (paso.tipo === 'caminar' || paso.tipo === 'transbordo') {
         const proximoPasoBus = rutaCompletaPlan[indicePaso + 1];
-        
+
         if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
-            const rutaId = proximoPasoBus.ruta.properties.id;
-            // El paradero de interés es donde vamos a SUBIR
-            const paraderoDeSubida = proximoPasoBus.paraderoInicio;
-            
-            console.log(`Esperando bus: ETA para ${rutaId} en ${paraderoDeSubida.properties.nombre}`);
-            iniciarEscuchaBuses(rutaId, paraderoDeSubida);
+            enfoqueNavegacion = {
+                rutaId: proximoPasoBus.ruta.properties.id,
+                paradero: proximoPasoBus.paraderoInicio
+            };
+            console.log(`🎯 Esperando ${enfoqueNavegacion.rutaId} en ${enfoqueNavegacion.paradero.properties.nombre}`);
         }
     }
-    // 3. CASO B: ¡Ya estamos arriba del camión!
+    // CASO B: ¡Ya estamos arriba del camión!
     else if (paso.tipo === 'bus') {
-        const rutaId = paso.ruta.properties.id;
-        // El paradero de interés ahora es donde nos vamos a BAJAR
-        const paraderoDeBajada = paso.paraderoFin;
-        
-        console.log(`Viajando en bus: ETA de bajada para ${rutaId} en ${paraderoDeBajada.properties.nombre}`);
-        iniciarEscuchaBuses(rutaId, paraderoDeBajada);
+        enfoqueNavegacion = {
+            rutaId: paso.ruta.properties.id,
+            paradero: paso.paraderoFin
+        };
+        console.log(`🎯 Viajando en ${enfoqueNavegacion.rutaId} hacia bajada en ${enfoqueNavegacion.paradero.properties.nombre}`);
     }
 }
 
-// js/app.js
 
 /**
  * (NUEVO) Inicializa la app de Firebase (Gestión)

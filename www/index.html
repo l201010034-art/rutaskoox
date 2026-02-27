@@ -94,6 +94,31 @@ body.dark-mode .marca-flotante-top {
     </style>
 </head>
 <body>
+    <div id="pantalla-actualizacion" class="overlay-loader oculto" style="z-index: 9999; background: var(--bg-color); flex-direction: column; text-align: center;">
+        <i class="ri-refresh-line ri-spin" style="font-size: 4rem; color: var(--primary-color);"></i>
+        <h2 style="margin-top: 20px; color: var(--text-color);">Actualizando Rutas Koox...</h2>
+        <p style="color: var(--text-color); opacity: 0.8;">Instalando nuevas mejoras y rutas 🚌</p>
+    </div>
+
+    <div id="modal-tyc" class="modal-overlay oculto" style="z-index: 9998;">
+        <div class="modal-content" style="max-height: 85vh; overflow-y: auto; text-align: left; padding: 25px;">
+            <h2 style="color: var(--primary-color); text-align: center; margin-top:0;">Transparencia y Privacidad 🛡️</h2>
+            <p>Para que Rutas Koox funcione al 100% y te guíe correctamente, necesitamos ser claros contigo sobre cómo usamos tus datos:</p>
+            
+            <ul style="margin-bottom: 20px; line-height: 1.6; padding-left: 20px;">
+                <li style="margin-bottom: 10px;">📍 <strong>Ubicación GPS:</strong> Usamos tu ubicación estricta solo mientras la app está abierta o navegando para indicarte dónde bajar y calcular tus tiempos.</li>
+                <li style="margin-bottom: 10px;">💾 <strong>Almacenamiento Local:</strong> Guardamos tu saldo virtual y configuraciones en tu propio dispositivo, no en nuestros servidores.</li>
+                <li>📡 <strong>Datos de Uso:</strong> Usamos telemetría anónima para saber si hay tráfico y mejorar la sincronización de los camiones.</li>
+            </ul>
+            
+            <p style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">
+                <i>Nunca venderemos tus datos. Al continuar, aceptas nuestros términos de servicio.</i>
+            </p>
+            
+            <button id="btn-aceptar-tyc" class="btn-primario" style="width: 100%; font-size: 1.1em; padding: 12px;">Entendido y Acepto</button>
+        </div>
+    </div>
+
     <div id="pantalla-mantenimiento" class="oculto" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#fff; z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:20px; box-sizing:border-box;">
         <i class="ri-tools-fill" style="font-size:5rem; color:#ff9900; margin-bottom:20px;"></i>
         <h2 style="color:#333; margin:0 0 10px 0;">Estamos en Mantenimiento</h2>
@@ -589,13 +614,27 @@ body.dark-mode .marca-flotante-top {
                 });
             });
     
-            // Escuchar si el SW toma el control (por el clients.claim() del activate)
-            let refreshing;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (refreshing) return;
+// 🚨 VERSIÓN DEL CONTROLADOR DE ACTUALIZACIONES 🚨
+        let refreshing;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            
+            // 1. Mostrar la pantalla visual de actualización al usuario
+            document.getElementById('pantalla-actualizacion').classList.remove('oculto');
+            document.getElementById('pantalla-actualizacion').style.display = 'flex';
+            
+            // 2. FORZAR que el usuario vuelva a ver el Tour y acepte los TyC en esta nueva versión
+            // Borramos los registros viejos del navegador
+            localStorage.removeItem('tour_visto_posicion_v4'); 
+            localStorage.removeItem('tyc_aceptados_koox'); 
+            
+            // 3. Esperamos 2.5 segundos para que el usuario lea que se está actualizando, y recargamos
+            setTimeout(() => {
                 window.location.reload();
                 refreshing = true;
-            });
+            }, 2500);
+        });
+        
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
