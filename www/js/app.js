@@ -1760,8 +1760,6 @@ function finalizarRuta() {
 
 // js/app.js
 
-// ... (código previo de handleLocationUpdate) ...
-
 function handleLocationUpdate(pos) {
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
@@ -1823,29 +1821,28 @@ function handleLocationUpdate(pos) {
                 const UMBRAL_DISTANCIA = 35; // 35 metros reales y verificados
                 const UMBRAL_VELOCIDAD = 8; // km/h
 
-if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
-                    const unidadId = busMasCercano.options.unidadId || (busMasCercano.getPopup().getContent().match(/Unidad (\w+)/) || [])[1];
+            if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
+                    // 🛡️ CORRECCIÓN: Forzamos a que el ID sea texto (String) para evitar errores de comparación
+                    const unidadIdStr = String(busMasCercano.options.unidadId || (busMasCercano.getPopup().getContent().match(/Unidad (\w+)/) || [])[1]);
 
-                    // 🚨 CORRECCIÓN VITAL: Inicializar el objeto SIEMPRE antes de usarlo
                     window.candidatoAbordaje = window.candidatoAbordaje || { unidad: null, contador: 0 };
 
-                    // Acumulamos tiempo para estar seguros de que no va pasando
-                    if (window.candidatoAbordaje.unidad === unidadId) {
+                    if (window.candidatoAbordaje.unidad === unidadIdStr) {
                         window.candidatoAbordaje.contador += 3;
                     } else {
-                        window.candidatoAbordaje.unidad = unidadId;
+                        window.candidatoAbordaje.unidad = unidadIdStr;
                         window.candidatoAbordaje.contador = 0;
                     }
 
                     if (window.candidatoAbordaje.contador >= 10 || (speedKmH > UMBRAL_VELOCIDAD)) {
-                        console.log(`🚌 ABORDAJE CONFIRMADO: Unidad ${unidadId} a ${distanciaMinima.toFixed(1)}m`);
-                        window.unidadAbordadaViajeActual = unidadId; 
+                        console.log(`🚌 ABORDAJE CONFIRMADO: Unidad ${unidadIdStr} a ${distanciaMinima.toFixed(1)}m`);
+                        window.unidadAbordadaViajeActual = unidadIdStr; 
                         window.candidatoAbordaje = { unidad: null, contador: 0 };
-                        activarModoTransbordo(false); 
                         
-                        // 💳 El cobro de tarjeta se hace desde aquí que tenemos la certeza topológica
-                        procesarAbordaje(rutaId, unidadId);
+                        // 💳 CORRECCIÓN: ¡Disparar el cobro virtual!
+                        procesarAbordaje(rutaId, unidadIdStr);
 
+                        activarModoTransbordo(false); 
                         siguientePaso(); 
                         return; 
                     }
@@ -1865,7 +1862,6 @@ if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
     checkProximidad(navState); 
 }
 
-// ... (el resto del archivo, incluyendo la función checkProximidad) ...
 
 function checkProximidad(navState) {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0 || pasoActual >= rutaCompletaPlan.length) return;
@@ -2565,60 +2561,48 @@ function mostrarInfoETA(info) {
  */
 
 
+// 🧠 Variables globales para la transición y el HUD
 export let rutaEscuchaActual = null;
 export let paraderoInteresActual = null;
 export let paraderosMasivosActuales = null;
 
-/**
- * (ACTUALIZADO - TRANSICIÓN SUAVE) 
- * Inicia la escucha de buses o actualiza el objetivo si es la misma ruta
- */
+// 🚀 AÑADE ESTAS DOS LÍNEAS PARA SOLUCIONAR EL ERROR:
+export let enfoqueNavegacion = { rutaId: null, paradero: null };
+export let busesCercanosHUD = new Map();
+
 export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMasivos = null) {
-    // 🛡️ TRANSICIÓN SUAVE: Si es la MISMA ruta, no desconectamos el satélite, solo cambiamos la meta
+    // 🔄 TRANSICIÓN SUAVE: Si seguimos en la misma ruta, solo actualizamos hacia dónde miramos
     if (socketVinden && socketVinden.connected && rutaEscuchaActual === filtroRutaId) {
-        console.log(`🔄 Transición suave: Manteniendo escucha de ${filtroRutaId}, actualizando ETA a: ${paraderoDeInteres?.properties?.nombre || 'Múltiples'}`);
         paraderoInteresActual = paraderoDeInteres;
-        paraderosMasivosActuales = paraderosMasivos;
-        limpiarETAs(); // Limpiamos los números viejos de la pantalla
+        if (paraderosMasivos) paraderosMasivosActuales = paraderosMasivos;
         return; 
     }
 
-    // Si es una ruta DIFERENTE, limpiamos conexiones previas y empezamos de cero
     detenerEscuchaBuses(); 
     
     rutaEscuchaActual = filtroRutaId;
     paraderoInteresActual = paraderoDeInteres;
     paraderosMasivosActuales = paraderosMasivos;
 
-    if (filtroRutaId) {
-        iniciarMotorInteligente(filtroRutaId); 
-    }
+    if (filtroRutaId) iniciarMotorInteligente(filtroRutaId); 
 
     const idVinden = obtenerIdVinden(filtroRutaId);
-
     if (!idVinden) {
-        console.log(`⚠️ La ruta ${filtroRutaId} aún no tiene ID de Vinden configurado.`);
         mostrarInfoETA(null);
         return;
     }
-
-    console.log(`📡 Iniciando conexión a Vinden para ruta: ${filtroRutaId}`);
 
     if (!socketVinden) {
         socketVinden = io('wss://socketio.campeche.vinden.cloud/app', {
             transports: ['websocket'],
             query: { r: '977', EIO: '3', transport: 'websocket' }
         });
-        
-        socketVinden.on('connect', () => {
-            socketVinden.emit('change-route', idVinden);
-        });
+        socketVinden.on('connect', () => socketVinden.emit('change-route', idVinden));
     } else {
         socketVinden.emit('change-route', idVinden);
     }
 
     const rutaGeoJSON = todasLasRutas.find(r => r.properties.id === filtroRutaId);
-    
     let rutaParaTurf = rutaGeoJSON;
     if (rutaGeoJSON && rutaGeoJSON.geometry && rutaGeoJSON.geometry.type === 'MultiLineString') {
         try {
@@ -2632,11 +2616,10 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     const originalOnEvent = socketVinden.onevent;
     socketVinden.onevent = function (packet) {
         const args = packet.data || [];
-        
         if (args[0] === 'update-location' && args[1] && args[1].data) {
             try {
                 const bus = JSON.parse(args[1].data);
-                const unidadId = bus.unit_id;
+                const unidadIdStr = String(bus.unit_id); // 🛡️ CASTEADO A STRING (Evita el bug del camión perdido)
                 const lat = parseFloat(bus.latlng[0]);
                 const lng = parseFloat(bus.latlng[1]);
                 
@@ -2646,29 +2629,27 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                 let busVisible = true;
                 const busPunto = turf.point([lng, lat]);
 
-                if (rutaParaTurf) {
-                    busVisible = esBusVisible(busPunto, rutaParaTurf);
-                }
+                if (rutaParaTurf) busVisible = esBusVisible(busPunto, rutaParaTurf);
 
                 if (busVisible) {
                     actualizarMarcadorBus(bus, filtroRutaId);
-                    registrarLatidoBusMotor(unidadId, bus.velocidadCalculada, filtroRutaId);
-                    
+                    registrarLatidoBusMotor(unidadIdStr, bus.velocidadCalculada, filtroRutaId);
                     if (paraderosMasivosActuales && paraderosMasivosActuales.length > 0) {
                         procesarETAMasivo(bus, busPunto, rutaParaTurf, paraderosMasivosActuales, filtroRutaId);
                     }
                 } else {
-                    removerMarcadorBus(unidadId); 
+                    removerMarcadorBus(unidadIdStr); 
                     originalOnEvent.call(this, packet);
                     return; 
                 }
 
-                // CÁLCULO DE ETA (Usando la variable global: paraderoInteresActual)
+                // CÁLCULO DE ETA PRINCIPAL (Panel Superior)
                 if (paraderoInteresActual && rutaParaTurf) {
                     let enViaje = (rutaCompletaPlan && rutaCompletaPlan[pasoActual] && rutaCompletaPlan[pasoActual].tipo === 'bus');
                     
-                    if (enViaje && window.unidadAbordadaViajeActual && window.unidadAbordadaViajeActual !== unidadId) {
-                        approachingBusesMap.delete(unidadId);
+                    // 🛡️ REGLA: Si vamos a bordo, ignorar COMPLETAMENTE cualquier otra unidad
+                    if (enViaje && window.unidadAbordadaViajeActual && window.unidadAbordadaViajeActual !== unidadIdStr) {
+                        approachingBusesMap.delete(unidadIdStr);
                     } else {
                         const puntoBusEnRuta = turf.nearestPointOnLine(rutaParaTurf, busPunto);
                         const puntoParaderoEnRuta = turf.nearestPointOnLine(rutaParaTurf, paraderoInteresActual.geometry.coordinates);
@@ -2676,13 +2657,13 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                         const distanciaFaltanteKm = puntoParaderoEnRuta.properties.location - puntoBusEnRuta.properties.location;
 
                         if (distanciaFaltanteKm > -0.05) {
-                            approachingBusesMap.set(unidadId, {
-                                id: bus.unit_number || unidadId, 
+                            approachingBusesMap.set(unidadIdStr, {
+                                id: bus.unit_number || unidadIdStr, 
                                 distanciaMetros: (distanciaFaltanteKm * 1000 > 0) ? (distanciaFaltanteKm * 1000) : 0,
                                 speed: velocidadReal
                             });
                         } else {
-                            approachingBusesMap.delete(unidadId);
+                            approachingBusesMap.delete(unidadIdStr);
                         }
                     }
                     
@@ -2704,9 +2685,7 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
                         });
                     }
                 }
-            } catch (e) {
-                console.error("Error procesando telemetría de Vinden:", e);
-            }
+            } catch (e) {}
         }
         originalOnEvent.call(this, packet); 
     };
@@ -2837,41 +2816,24 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
     });
 }
 
-// 🧠 Variables para el enfoque del HUD (Head-Up Display) sin matar sockets
-export let enfoqueNavegacion = { rutaId: null, paradero: null };
-export let busesCercanosHUD = new Map();
-
-/**
- * (ACTUALIZADO) Revisa el paso actual y decide en qué ruta y paradero
- * enfocarse para mostrar el ETA en el panel principal, ¡SIN matar los sockets!
- */
 function llamarEscuchaParaPaso(indicePaso) {
     const paso = rutaCompletaPlan[indicePaso];
     if (!paso) return;
 
-    // Limpiamos la pantalla del HUD del paso anterior para recibir los nuevos cálculos
-    busesCercanosHUD.clear();
-    mostrarInfoETA(null);
+    // 🚀 ELIMINAMOS detenerEscuchaBuses() para no matar el satélite
 
-    // CASO A: Caminando hacia el paradero o esperando un transbordo
     if (paso.tipo === 'caminar' || paso.tipo === 'transbordo') {
         const proximoPasoBus = rutaCompletaPlan[indicePaso + 1];
-
         if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
-            enfoqueNavegacion = {
-                rutaId: proximoPasoBus.ruta.properties.id,
-                paradero: proximoPasoBus.paraderoInicio
-            };
-            console.log(`🎯 Esperando ${enfoqueNavegacion.rutaId} en ${enfoqueNavegacion.paradero.properties.nombre}`);
+            const rutaId = proximoPasoBus.ruta.properties.id;
+            const paraderoDeSubida = proximoPasoBus.paraderoInicio;
+            iniciarEscuchaBuses(rutaId, paraderoDeSubida);
         }
     }
-    // CASO B: ¡Ya estamos arriba del camión!
     else if (paso.tipo === 'bus') {
-        enfoqueNavegacion = {
-            rutaId: paso.ruta.properties.id,
-            paradero: paso.paraderoFin
-        };
-        console.log(`🎯 Viajando en ${enfoqueNavegacion.rutaId} hacia bajada en ${enfoqueNavegacion.paradero.properties.nombre}`);
+        const rutaId = paso.ruta.properties.id;
+        const paraderoDeBajada = paso.paraderoFin;
+        iniciarEscuchaBuses(rutaId, paraderoDeBajada);
     }
 }
 

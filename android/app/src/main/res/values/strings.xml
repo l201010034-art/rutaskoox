@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">Rutas Ko\'ox - Planifica tu ruta!</string>
     <string name="title_activity_main">Rutas Ko\'ox - Planifica tu ruta!</string>
-    <string name="package_name">rkooxcampeche.aolastudios.com</string>
-    <string name="custom_url_scheme">rkooxcampeche.aolastudios.com</string>
+    <string name="package_name">rkooxcampeche.systemsla.com</string>
+    <string name="custom_url_scheme">rkooxcampeche.systemsla.com</string>
 
     <string name="server_client_id">332778953247-fh2jgd1beihlqs4fkiddrer2c3vkhadu.apps.googleusercontent.com</string>
 </resources>

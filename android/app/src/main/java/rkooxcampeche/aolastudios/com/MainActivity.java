@@ -1,4 +1,4 @@
-package rkooxcampeche.aolastudios.com;
+package rkooxcampeche.systemsla.com;
 
 import com.getcapacitor.BridgeActivity;
 
