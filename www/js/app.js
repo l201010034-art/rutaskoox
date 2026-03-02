@@ -2566,9 +2566,10 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     }
 
 if (!socketVinden) {
-        socketVinden = io('https://socketio.campeche.vinden.cloud/app', {
-            transports: ['websocket', 'polling'], 
-            query: { r: '977' } // ⬅️ ¡Recuperamos la llave de acceso de Vinden!
+        socketVinden = io('wss://socketio.campeche.vinden.cloud/app', {
+            transports: ['websocket'],
+            query: { r: '977', EIO: '3', transport: 'websocket' },
+            forceNew: true 
         });
         socketVinden.on('connect', () => socketVinden.emit('change-route', idVinden));
     } else {
@@ -2685,10 +2686,14 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
 
         // Escalonamos la conexión (300ms) para no ahogar la red celular
         setTimeout(() => {
-            const unSocket = io('https://socketio.campeche.vinden.cloud/app', {
-                transports: ['websocket', 'polling'],
-                query: { r: '977' }, // ⬅️ ¡Aquí también!
+            const unSocket = io('wss://socketio.campeche.vinden.cloud/app', {
+                transports: ['websocket'],
+                query: { r: '977', EIO: '3', transport: 'websocket' },
                 forceNew: true 
+            });
+
+            unSocket.on('connect', () => {
+                unSocket.emit('change-route', idVinden);
             });
 
             unSocket.on('connect', () => {
