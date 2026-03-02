@@ -92,70 +92,47 @@ export function reportarVelocidadUsuario(velocidadKmH) {
     }
 }
 
-/**
- * 💳 MOTOR DE COBRO: Ejecuta la regla de negocio al abordar
- */
-export async function procesarAbordaje(rutaId, unidadId) {
-    // 🛡️ CANDADO DE ANCLAJE: Ignora otros camiones si ya estás viajando en uno
-    if (estadoFisico.ancladoAUnidad) {
-        if (estadoFisico.ancladoAUnidad !== unidadId) return; // Es un bus que va pasando
-        return; // Es el mismo bus en el que ya pagaste, no hacer nada
-    }
+export function procesarAbordaje(rutaId, unidadId) {
+    if (!walletState) return false;
 
     const ahora = Date.now();
+    const VENTANA_TRANSBORDO_MS = 90 * 60 * 1000; // 90 minutos para transbordos
+
+    // 1. Calcular en qué número de viaje del transbordo estamos
+    if (walletState.ultimoCobro && (ahora - walletState.ultimoCobro <= VENTANA_TRANSBORDO_MS)) {
+        walletState.viajesEnVentana += 1; // Es un transbordo activo
+    } else {
+        walletState.viajesEnVentana = 1; // Primer viaje del día o la ventana expiró
+    }
+
+    // 2. Determinar el costo según tarifas oficiales
     const esPreferencial = userSettings.tarifaPreferencial;
+    // Tabla: [Viaje 1, Viaje 2, Viaje 3, Viaje 4+]
+    const tarifas = esPreferencial ? [6.00, 3.00, 0.00, 0.00] : [12.00, 6.00, 0.00, 0.00];
     
-    // 1. Evaluar ventana de transbordo (90 min)
-    if (ahora - walletState.ultimoCobro > VENTANA_TRANSBORDO_MS) {
-        walletState.viajesEnVentana = 0; // Se reinicia el ciclo
-    }
+    // El índice es el viaje actual menos 1 (Ej. Viaje 1 = Índice 0)
+    const indiceTarifa = Math.min(walletState.viajesEnVentana - 1, 3);
+    const costoViaje = tarifas[indiceTarifa];
 
-    const esElMismoBus = (walletState.ultimaUnidadCobrada === unidadId);
-    let costoViaje = 0;
-    let incrementaViaje = false; 
-
-    // 2. REGLAS: PREFERENCIAL (Estudiante/INAPAM)
-    if (esPreferencial) {
-        if (esElMismoBus && walletState.viajesEnVentana > 0) {
-            mostrarAlertaUI("Tarjeta Bloqueada", "No puedes usar la tarifa preferencial dos veces en la misma unidad en menos de 90 min.");
-            return; 
-        } else {
-            const indice = Math.min(walletState.viajesEnVentana, 3);
-            costoViaje = TARIFAS.preferencial[indice];
-            incrementaViaje = true;
-        }
-    } 
-    // 3. REGLAS: GENERAL
-    else {
-        if (esElMismoBus && walletState.viajesEnVentana > 0) {
-            costoViaje = TARIFAS.general[0]; // Paga pasaje completo para un acompañante
-            incrementaViaje = false; // Su propio transbordo sigue intacto para el sig. bus
-        } else {
-            const indice = Math.min(walletState.viajesEnVentana, 3);
-            costoViaje = TARIFAS.general[indice];
-            incrementaViaje = true;
-        }
-    }
-
-    // 4. VALIDAR FONDOS Y COBRAR
+    // 3. Validar Saldo
     if (walletState.saldo < costoViaje) {
-        mostrarAlertaUI("Saldo Insuficiente", `Necesitas $${costoViaje.toFixed(2)}. Saldo: $${walletState.saldo.toFixed(2)}`);
-        return;
+        mostrarAlertaUI("Saldo Insuficiente", `Necesitas $${costoViaje.toFixed(2)}. Tu saldo es $${walletState.saldo.toFixed(2)}`);
+        return false; // Bloquea el abordaje
     }
 
+    // 4. Ejecutar el cobro
     walletState.saldo -= costoViaje;
     walletState.ultimoCobro = ahora;
     walletState.ultimaUnidadCobrada = unidadId;
-    if (incrementaViaje) walletState.viajesEnVentana++;
     
-    guardarWallet();
+    localStorage.setItem('kooxWallet', JSON.stringify(walletState));
 
-    // 5. ANCLAJE Y NOTIFICACIÓN
-    estadoFisico.ancladoAUnidad = unidadId;
-    console.log(`🔒 Usuario anclado físicamente a la unidad ${unidadId}`);
-
+    // 5. Notificar
+    console.log(`💳 Cobro exitoso: $${costoViaje.toFixed(2)} por viaje #${walletState.viajesEnVentana} (Ruta ${rutaId})`);
     const tipoViaje = costoViaje === 0 ? "Transbordo Gratuito" : "Pasaje Pagado";
     mostrarAlertaUI(`✅ ${tipoViaje}`, `Unidad ${unidadId}. Saldo restante: $${walletState.saldo.toFixed(2)}`);
+    
+    return true; // Abordaje autorizado
 }
 
 async function mostrarAlertaUI(titulo, mensaje) {

@@ -258,31 +258,49 @@ body.dark-mode .marca-flotante-top {
         </div>
     </div> 
 
-    <div id="panel-navegacion" class="oculto">
-        <div class="panel-header-nav">
-             <button id="btnMinimizarNav" class="icon-btn-simple"><i class="ri-arrow-down-s-line"></i></button>
-            <span style="font-weight: bold;">Navegando</span>
-            <div style="width: 30px;"></div> </div>
+    <div id="hud-navegacion" class="hud-flotante oculto">
         
-        <div id="instruccion-actual">Cargando...</div>
-        <div id="info-en-vivo-container"><div id="eta-info" class="eta-info"></div></div>
-        
-        <div id="nav-estado">
-            <strong id="distancia-restante">...</strong>
-            <strong id="tiempo-viaje">0:00</strong>
-            <strong id="tiempo-espera">0:00</strong>
+        <button id="btnCerrarHud" class="hud-close-btn" aria-label="Terminar ruta">
+            <i class="ri-close-line"></i>
+        </button>
+
+        <div class="hud-progress-container">
+            <div id="hud-progress-bar" class="hud-progress-fill"></div>
         </div>
-        <div id="controles-nav">
-            <button id="btnAnterior" class="btn-nav btn-nav-secundario" disabled>
-                <i class="ri-arrow-left-s-line"></i> Anterior
+
+        <div class="hud-body">
+            <div class="hud-icon-wrapper">
+                <div class="hud-icon-container" id="hud-icon">🚶‍♂️</div>
+            </div>
+            <div class="hud-text-container">
+                <h3 id="hud-instruccion">Calculando...</h3>
+                <p id="hud-detalles">Preparando tu viaje</p>
+                
+                <div id="eta-info" class="eta-info" style="font-size: 0.9em; margin-top: 5px; display: none;"></div>
+            </div>
+        </div>
+
+        <div id="hud-estado-live" class="hud-status-bar">
+            <div class="status-item">
+                <i class="ri-route-line"></i> <span id="hud-distancia">-- km</span>
+            </div>
+            <div class="status-item">
+                <i class="ri-timer-line"></i> <span id="hud-tiempo-viaje">0:00</span>
+            </div>
+            <div class="status-item badge-estado" id="hud-estado-movimiento">
+                Conectando...
+            </div>
+        </div>
+
+        <div id="hud-controles-manuales" class="hud-controls oculto">
+            <button id="btnNavAnterior" class="btn-hud btn-hud-secundario">
+                <i class="ri-arrow-left-s-line"></i> Atrás
             </button>
-            
-            <button id="btnSiguiente" class="btn-nav btn-nav-primario">
-                Siguiente <i class="ri-arrow-right-s-line"></i>
+            <button id="btnNavSiguiente" class="btn-hud btn-hud-primario">
+                Sig. <i class="ri-arrow-right-s-line"></i>
             </button>
-            
-            <button id="btnFinalizar" class="btn-nav btn-nav-danger" style="display: none;">
-                <i class="ri-flag-fill"></i> Finalizar Viaje
+            <button id="btnNavFinalizar" class="btn-hud btn-hud-danger oculto">
+                <i class="ri-flag-fill"></i> Llegué
             </button>
         </div>
     </div>

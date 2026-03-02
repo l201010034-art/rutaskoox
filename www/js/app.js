@@ -26,6 +26,7 @@ import { iniciarTour, checkAndStartTour } from './tour.js';
 import { iniciarMotorInteligente, detenerMotorInteligente, registrarLatidoBusMotor } from './statusEngine.js';
 import { recargarSaldo, obtenerSaldo, procesarAbordaje, vincularTarjetaQR, obtenerDatosTarjeta, fijarSaldo, desvincularTarjetaQR } from './walletService.js';
 import { calcularCostoEstimado, checkSaldoParaRuta, advertirSaldoInsuficiente } from './costService.js';
+import { NavEngine } from './navigationEngine.js';
 
 async function mantenerPantallaEncendida() {
     try {
@@ -333,11 +334,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnIniciarRuta = document.getElementById('btnIniciarRuta');
     btnLimpiar = document.getElementById('btnLimpiar');
     panelControl = document.getElementById('panel-control');
-    panelNavegacion = document.getElementById('panel-navegacion');
+    panelNavegacion = document.getElementById('hud-navegacion');    
     instruccionActualEl = document.getElementById('instruccion-actual');
-    btnAnterior = document.getElementById('btnAnterior');
-    btnSiguiente = document.getElementById('btnSiguiente');
-    btnFinalizar = document.getElementById('btnFinalizar');
     distanciaRestanteEl = document.getElementById('distancia-restante');
     tiempoEsperaEl = document.getElementById('tiempo-espera');
     panelViaje = document.getElementById('panel-viaje');
@@ -351,6 +349,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     tiempoViajeEl = document.getElementById('tiempo-viaje');
     btnParaderosCercanos = document.getElementById('btnParaderosCercanos');
     alertIndicatorEl = document.getElementById('alert-indicator'); // ⬅️ ASIGNA EL BANNER
+
+
+    // =========================================
+    // 🎧 CONEXIÓN CON EL NUEVO HUD FLOTANTE
+    // =========================================
+    document.addEventListener('nav-engine-step', (e) => {
+        const indice = e.detail.indice;
+        pasoActual = indice;
+        autoCentrar = true; 
+        alertaMostrada = false;
+        
+        // Usamos tu función existente para dibujar la línea azul y centrar la cámara
+        mostrarPaso(pasoActual);
+        
+        // Mantenemos viva la conexión con Vinden para este nuevo tramo
+        llamarEscuchaParaPaso(pasoActual);
+    });
+
+    document.addEventListener('nav-engine-stopped', () => {
+        // Cuando el usuario le da a la 'X' del HUD o llega a su destino
+        finalizarRuta();
+    });
+
+
     btnModoReporte = document.getElementById('btnModoReporte');
     panelReporte = document.getElementById('panel-reporte');
     solicitarPermisosIniciales();
@@ -430,9 +452,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnParaderosCercanos.addEventListener('click', handleParaderosCercanos);
     btnLimpiar.addEventListener('click', limpiarMapa);
     btnIniciarRuta.addEventListener('click', iniciarRutaProgresiva);
-    btnSiguiente.addEventListener('click', siguientePaso);
-    btnAnterior.addEventListener('click', pasoAnterior);
-    btnFinalizar.addEventListener('click', finalizarRuta);
     btnLimpiarExplorar.addEventListener('click', limpiarMapa);
     // ⬇️⬇️ INICIO MÓDULO DE ENVÍO DE REPORTES ⬇️⬇️
     document.querySelectorAll('.btn-reporte').forEach(btn => {
@@ -1321,7 +1340,6 @@ function limpiarMapa() {
     // --- RESETEAR NAVEGACIÓN ---
     panelNavegacion.classList.add('oculto');
     document.getElementById('nav-estado').style.display = 'flex'; 
-    tiempoEsperaEl.className = ''; // ⬅️ AÑADE ESTA LÍNEA (resetea el color)
     stopNavigation(); 
     detenerWatchLocation(watchId); // ⬅️ Detiene el watch de NAVEGACIÓN
     
@@ -1654,13 +1672,10 @@ function encontrarParaderoMasCercano(punto) {
 
 // --- 7. FUNCIONES DE NAVEGACIÓN ---
 
-// ⬇️ MODIFICADO: Permite modo manual (sin GPS) ⬇️
-// js/app.js
-
 function iniciarRutaProgresiva() {
     if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
 
-// ⬇️⬇️ NUEVO MÓDULO DE VERIFICACIÓN DE COSTOS ⬇️⬇️
+    // ⬇️⬇️ MÓDULO DE VERIFICACIÓN DE COSTOS (MANTENIDO) ⬇️⬇️
     const numBuses = rutaCompletaPlan.filter(p => p.tipo === 'bus').length;
     if (numBuses > 0) {
         const estimacion = calcularCostoEstimado(numBuses);
@@ -1670,7 +1685,7 @@ function iniciarRutaProgresiva() {
     }
     // ⬆️⬆️ FIN DEL MÓDULO ⬆️⬆️
 
-    // se guarde en la nube de Firebase, de lo contrario, puedes quitarla también.
+    // ⬇️⬇️ MÓDULO DE HISTORIAL Y SESIÓN (MANTENIDO) ⬇️⬇️
     const user = getUsuario();
     
     if (!user) {
@@ -1678,10 +1693,8 @@ function iniciarRutaProgresiva() {
             iniciarSesion();
             return;
         }
-        // Si dice que no, igual lo dejamos usar el GPS como invitado libre.
     }
 
-    // ⬇️⬇️ INICIO DEL NUEVO MÓDULO DE HISTORIAL ⬇️⬇️
     try {
         const rutaResumen = rutaCompletaPlan.filter(p => p.tipo === 'bus').map(p => p.ruta.properties.id).join(' → ');
 
@@ -1698,46 +1711,44 @@ function iniciarRutaProgresiva() {
     } catch (e) {
         console.error("Error al guardar en el historial:", e);
     }
-    // ⬆️⬆️ FIN DEL MÓDULO (CORREGIDO) ⬆️⬆️
-    // Configuración común para ambos modos
+    // ⬆️⬆️ FIN DEL MÓDULO ⬆️⬆️
+
+    // ==========================================
+    // 🚀 INICIO DEL NUEVO SISTEMA DE NAVEGACIÓN
+    // ==========================================
+    
     pasoActual = 0;
     alertaMostrada = false;
+
+    // 1. Ocultar paneles viejos
     panelControl.classList.add('oculto'); 
-    panelNavegacion.classList.remove('oculto');
+    if (panelNavegacion) panelNavegacion.classList.add('oculto'); 
     
-    // Comprobamos si el GPS está activo (si puntoInicio fue fijado)
-    if (puntoInicio) {
+    // 2. Evaluar si tenemos GPS (Live) o no (Manual)
+    const tieneGPS = puntoInicio !== null;
+
+    // 3. ¡ENCENDEMOS EL MOTOR HUD!
+    // Al hacer 'start', el motor dispara el evento que dibujará la línea y centrará el mapa
+    NavEngine.start(rutaCompletaPlan, tieneGPS);
+
+    if (tieneGPS) {
         // --- MODO GPS (ACTIVO) ---
-        console.log("Iniciando modo de navegación GPS (Activo)...");
+        console.log("Iniciando HUD Live (GPS Activo)...");
         detenerWatchLocation(initialWatchId);
-        // Mostramos los contadores de tiempo real
-        document.getElementById('nav-estado').style.display = 'flex'; 
         
-        // Iniciamos los servicios de GPS
+        // Iniciamos los servicios de GPS reales
         crearMarcadorUsuario(puntoInicio.geometry.coordinates.slice().reverse());
         startNavigation(puntoInicio); 
-        // ❗️Importante: El 'watchId' global ya está corriendo (Bug 1).
-        // Lo re-asignamos a 'watchId' de navegación y cambiamos su callback.
-        // (Esto asume que 'iniciarWatchLocation' detiene el anterior si existe,
-        // o que 'locationService' maneja un solo watchId. Para ser seguros,
-        // cambiamos el callback en 'locationService' o lo manejamos aquí)
-        // Por simplicidad, asumimos que 'iniciarWatchLocation' es el mismo watch.
-        watchId = iniciarWatchLocation(handleLocationUpdate, handleLocationError); // ⬅️ Asignamos el watch a la NAVEGACIÓN
+        
+        watchId = iniciarWatchLocation(handleLocationUpdate, handleLocationError); 
         map.on('dragstart', () => { autoCentrar = false; });
 
     } else {
         // --- MODO MANUAL (PASIVO) ---
-        console.log("Iniciando modo de navegación MANUAL (Pasivo)...");
-        
-        // Ocultamos los contadores de tiempo real (no hay GPS)
-        document.getElementById('nav-estado').style.display = 'none'; 
-        
-        watchId = null; // No hay GPS
+        console.log("Iniciando HUD Manual (Sin GPS)...");
+        watchId = null; 
         autoCentrar = true; 
     }
-    llamarEscuchaParaPaso(pasoActual);
-    // Mostramos el primer paso para ambos modos
-    mostrarPaso(pasoActual);
 }
 
 // js/app.js (en la función finalizarRuta)
@@ -1758,108 +1769,115 @@ function finalizarRuta() {
     limpiarMapa();
 }
 
-// js/app.js
-
-function handleLocationUpdate(pos) {
+/**
+ * PROCESA EL GPS EN VIVO (Sistema de Abordaje 100% Automático - Cero Clics)
+ */
+async function handleLocationUpdate(pos) {
     const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const speed = pos.coords.speed; // ⬅️ Extraemos la velocidad
-    const latlng = [lat, lon];
+    const lng = pos.coords.longitude;
+    const speed = pos.coords.speed || 0; 
+    const speedKmH = speed * 3.6; 
 
-    puntoInicio = turf.point([lon, lat]);
-    crearMarcadorUsuario(latlng);
+    const puntoUsuario = turf.point([lng, lat]);
+    crearMarcadorUsuario([lat, lng]);
 
-    if (autoCentrar) {
-        map.panTo(latlng);
-    }
+    if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) return;
 
-    const navState = updatePosition(puntoInicio, speed); 
-    if (!navState) return; // Salimos si la navegación no está iniciada
+    const navState = updatePosition(puntoUsuario, speed);
+    if (!navState) return;
 
-// ----------------------------------------------------
-    // ⬇️⬇️ LÓGICA DE DETECCIÓN "A BORDO" (BLINDADA V3) ⬇️⬇️
-    // ----------------------------------------------------
-    if (rutaCompletaPlan && pasoActual < rutaCompletaPlan.length) {
-        const paso = rutaCompletaPlan[pasoActual];
+    actualizarUI_Navegacion(navState);
+
+    const pasoActualObj = rutaCompletaPlan[pasoActual];
+    if (!pasoActualObj) return;
+
+    // =========================================================
+    // 🤖 ALGORITMO DE ABORDAJE "CERO CLICS" (TRUST SCORE)
+    // =========================================================
+    if (pasoActualObj.tipo === 'caminar' || pasoActualObj.tipo === 'transbordo') {
         
-        if (paso.tipo === 'caminar' || paso.tipo === 'transbordo') {
-            const proximoPasoBus = rutaCompletaPlan[pasoActual + 1];
-            
-            if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
-                const rutaId = proximoPasoBus.ruta.properties.id;
-                const paraderoSubida = proximoPasoBus.paraderoInicio;
-                
-                let busMasCercano = null;
-                let distanciaMinima = Infinity;
+        let rutaObjetivoId = null;
 
-                // Aplanamos la ruta para la regla de sentido
-                let rutaLine = proximoPasoBus.ruta;
-                if(rutaLine.geometry.type === 'MultiLineString') {
-                    rutaLine = turf.lineString(rutaLine.geometry.coordinates.flat());
+        // 🛡️ REGLA 1: Solo miramos el paso INMEDIATAMENTE siguiente.
+        // Esto evita la "reacción en cadena" que saltaba hasta el final de la ruta.
+        if (rutaCompletaPlan[pasoActual + 1] && rutaCompletaPlan[pasoActual + 1].tipo === 'bus') {
+            rutaObjetivoId = rutaCompletaPlan[pasoActual + 1].ruta.properties.id;
+        }
+
+        // 🛡️ REGLA 2: Cooldown. Si nos acabamos de subir a un camión, esperamos 15s antes de volver a escanear.
+        const enCooldown = window.cooldownAbordaje && Date.now() < window.cooldownAbordaje;
+
+        if (rutaObjetivoId && !window.unidadAbordadaViajeActual && !enCooldown) {
+            let busMasCercano = null;
+            let distanciaMinima = Infinity;
+
+            marcadoresBuses.forEach((marker) => {
+                if (marker.options.rutaId !== rutaObjetivoId) return; 
+
+                const latlng = marker.getLatLng();
+                const markerPunto = turf.point([latlng.lng, latlng.lat]);
+                const dist = turf.distance(puntoUsuario, markerPunto, { units: 'meters' });
+                
+                if (dist < distanciaMinima) {
+                    distanciaMinima = dist;
+                    busMasCercano = marker;
                 }
-                const distParaderoOnLine = turf.nearestPointOnLine(rutaLine, paraderoSubida).properties.location;
-                
-                map.eachLayer(layer => {
-                    if (layer.options && layer.options.rutaId === rutaId) {
-                        const busPunto = turf.point([layer.getLatLng().lng, layer.getLatLng().lat]);
-                        
-                        // 🚀 CORRECCIÓN CRÍTICA: Forzamos KILÓMETROS y multiplicamos por 1000.
-                        // Esto mata el bug que te subía a unidades que estaban a 17km de distancia.
-                        const distanciaMetros = turf.distance(puntoInicio, busPunto, { units: 'kilometers' }) * 1000;
-                        const distBusOnLine = turf.nearestPointOnLine(rutaLine, busPunto).properties.location;
-                        
-                        // 🛡️ REGLA DE SENTIDO: El bus debe estar ANTES del paradero (damos 150m de tolerancia si va pasando)
-                        if (distBusOnLine <= distParaderoOnLine + 0.15) {
-                            if (distanciaMetros < distanciaMinima) {
-                                distanciaMinima = distanciaMetros;
-                                busMasCercano = layer;
-                            }
-                        }
-                    }
-                });
+            });
 
-                const UMBRAL_DISTANCIA = 35; // 35 metros reales y verificados
-                const UMBRAL_VELOCIDAD = 8; // km/h
+            // 🧠 ALGORITMO DE CONFIANZA
+            const UMBRAL_DISTANCIA = 60; // Margen de lag del GPS
+            const UMBRAL_VELOCIDAD = 12; // Si va a más de 12km/h, seguro va a bordo
 
             if (busMasCercano && distanciaMinima < UMBRAL_DISTANCIA) {
-                    // 🛡️ CORRECCIÓN: Forzamos a que el ID sea texto (String) para evitar errores de comparación
-                    const unidadIdStr = String(busMasCercano.options.unidadId || (busMasCercano.getPopup().getContent().match(/Unidad (\w+)/) || [])[1]);
+                const unidadIdStr = String(busMasCercano.options.unidadId || (busMasCercano.getPopup().getContent().match(/Unidad (\w+)/) || [])[1]);
 
-                    window.candidatoAbordaje = window.candidatoAbordaje || { unidad: null, contador: 0 };
+                window.candidatoAbordaje = window.candidatoAbordaje || { unidad: null, score: 0 };
 
-                    if (window.candidatoAbordaje.unidad === unidadIdStr) {
-                        window.candidatoAbordaje.contador += 3;
-                    } else {
-                        window.candidatoAbordaje.unidad = unidadIdStr;
-                        window.candidatoAbordaje.contador = 0;
-                    }
-
-                    if (window.candidatoAbordaje.contador >= 10 || (speedKmH > UMBRAL_VELOCIDAD)) {
-                        console.log(`🚌 ABORDAJE CONFIRMADO: Unidad ${unidadIdStr} a ${distanciaMinima.toFixed(1)}m`);
-                        window.unidadAbordadaViajeActual = unidadIdStr; 
-                        window.candidatoAbordaje = { unidad: null, contador: 0 };
-                        
-                        // 💳 CORRECCIÓN: ¡Disparar el cobro virtual!
-                        procesarAbordaje(rutaId, unidadIdStr);
-
-                        activarModoTransbordo(false); 
-                        siguientePaso(); 
-                        return; 
+                if (window.candidatoAbordaje.unidad === unidadIdStr) {
+                    // Si va rápido y está cerca, los puntos se disparan
+                    if (speedKmH > UMBRAL_VELOCIDAD) {
+                        window.candidatoAbordaje.score += 20;
+                    } 
+                    // Si va lento (tráfico) pero está casi tocando el camión
+                    else if (distanciaMinima < 20) {
+                        window.candidatoAbordaje.score += 10;
                     }
                 } else {
-                    window.candidatoAbordaje = { unidad: null, contador: 0 };
+                    window.candidatoAbordaje.unidad = unidadIdStr;
+                    window.candidatoAbordaje.score = 0;
+                }
+
+                // 🎯 EJECUCIÓN DEL ABORDAJE (Se requieren 40 puntos = aprox 2-4 segundos de certeza)
+                if (window.candidatoAbordaje.score >= 40) {
+                    console.log(`🚀 AUTO-ABORDAJE: Unidad ${unidadIdStr} (Ruta: ${rutaObjetivoId}) Confirmado al 100%`);
+                    
+                    window.unidadAbordadaViajeActual = unidadIdStr; 
+                    window.candidatoAbordaje = { unidad: null, score: 0 };
+                    window.cooldownAbordaje = Date.now() + 15000; // Bloqueo de seguridad de 15 segundos
+                    
+                    const cobroExitoso = procesarAbordaje(rutaObjetivoId, unidadIdStr);
+                    
+                    if (cobroExitoso) {
+                        activarModoTransbordo(false); 
+                        NavEngine.autoAvanzar(); // 🚀 ¡El motor actualiza el HUD y avanza el mapa!
+                    } else {
+                        window.unidadAbordadaViajeActual = null; // Revertir si la billetera no tiene fondos
+                    }
+                    return; 
+                }
+            } else {
+                // Si el camión se aleja o se pierde la señal, el score baja poco a poco
+                if (window.candidatoAbordaje && window.candidatoAbordaje.score > 0) {
+                    window.candidatoAbordaje.score -= 5;
                 }
             }
         }
     }
-    // ----------------------------------------------------
-    // ⬆️⬆️ FIN LÓGICA DE DETECCIÓN "A BORDO" (CORREGIDA) ⬆️⬆️
-    // ----------------------------------------------------
 
-    actualizarUI_Navegacion(navState);
-
-    // ⬇️ Revisión de avance de paso (Bajada) ⬇️
-    checkProximidad(navState); 
+    // =========================================================
+    // 🏁 LÓGICA DE BAJADA Y LLEGADA
+    // =========================================================
+    checkProximidad(navState);
 }
 
 
@@ -1893,12 +1911,11 @@ function checkProximidad(navState) {
     if (paso.tipo === 'caminar') {
         const distanciaMetros = turf.distance(puntoInicio, puntoDeInteres, { units: 'meters' });
         
-        // Si la distancia es muy pequeña, AVANZA.
-        if (distanciaMetros < 25) { 
-            console.log("Llegaste al paradero de subida, avanzando...");
-            siguientePaso();
-            return;
-        }
+    if (distanciaMetros < 25) { 
+                console.log("Llegaste al paradero de subida, avanzando...");
+                NavEngine.autoAvanzar(); // 🚀 CORRECCIÓN AQUÍ
+                return;
+            }
     }
 
 // B. Paso de Bus (Monitoreo de Bajada)
@@ -1940,7 +1957,6 @@ function checkProximidad(navState) {
                     return;
                 }
                 
-                // Si NO es el paso final, activamos el transbordo
                 console.log("Activando contador de transbordo...");
                 activarModoTransbordo(); 
                 if (userSettings.vibration && navigator.vibrate) {
@@ -1948,7 +1964,7 @@ function checkProximidad(navState) {
                 }
                 
                 // Avanzamos al siguiente paso
-                siguientePaso();
+                NavEngine.autoAvanzar(); // 🚀 CORRECCIÓN AQUÍ
                 return;
             }
         } catch (e) {
@@ -1985,23 +2001,11 @@ function pasoAnterior() {
 
 function mostrarPaso(indice) {
     const paso = rutaCompletaPlan[indice];
-    instruccionActualEl.textContent = paso.texto;
-    btnAnterior.disabled = (indice === 0);
     
-    // ⬇️⬇️ INICIO DE LA CORRECCIÓN ⬇️⬇️
-    const esUltimoPaso = (indice === rutaCompletaPlan.length - 1);
-    
-    btnSiguiente.disabled = esUltimoPaso;
-    btnFinalizar.style.display = 'block'; // ⬅️ CORRECCIÓN: Mostrar SIEMPRE
-    
-    // Simplemente ocultamos "Siguiente" en el último paso
-    if (esUltimoPaso) {
-        btnSiguiente.style.display = 'none';
-    } else {
-        btnSiguiente.style.display = 'block'; // O 'inline-block' si prefieres
-    }
-    // ⬆️⬆️ FIN DE LA CORRECCIÓN ⬆️⬆️
-    
+    // 🧹 Borramos todo el código viejo que modificaba textos y botones aquí
+    // El NavEngine ya hizo ese trabajo visual por nosotros.
+
+    // 🗺️ Solo nos dedicamos a dibujar la línea azul y los pines:
     const puntoDePartida = puntoInicio || paraderoInicioCercano;
     const bounds = dibujarPaso(paso, puntoDePartida); 
     
@@ -2012,65 +2016,34 @@ function mostrarPaso(indice) {
     }
 }
 
-// js/app.js
-
 function actualizarUI_Navegacion(navState) {
-
-    // 1. Actualizar distancia
+    // 1. Calcula la distancia faltante
     const distanciaFaltante = Math.max(0, distanciaTotalRuta - navState.distanciaRecorrida);
-    if (distanciaFaltante > 1000) {
-        distanciaRestanteEl.textContent = `Faltan: ${(distanciaFaltante / 1000).toFixed(2)} km`;
-    } else {
-        distanciaRestanteEl.textContent = `Faltan: ${distanciaFaltante.toFixed(0)} m`;
-    }
+    const textoDistancia = distanciaFaltante > 1000 
+        ? `${(distanciaFaltante / 1000).toFixed(2)} km` 
+        : `${distanciaFaltante.toFixed(0)} m`;
 
-    // ⬇️ SECCIÓN DE LÓGICA DE CONTADOR COMPLETAMENTE REEMPLAZADA ⬇️
-    // 2. Actualizar estado (Movimiento / Transbordo / Esperando)
-    const LIMITE_TIEMPO_TRANSBORDO = 5400; // 2 horas en segundos
+    const spanDistancia = document.getElementById('hud-distancia');
+    if(spanDistancia) spanDistancia.textContent = textoDistancia;
 
-    // Resetea la clase CSS
-    tiempoEsperaEl.className = ''; 
+    // 2. Calcula el tiempo y estado
+    let textoTiempo = "0:00";
+    let textoEstado = "";
+    let claseEstado = "";
 
     if (navState.enModoTransbordo && !navState.enMovimiento) {
-        // --- ESTADO 1: En Transbordo (Detenido) ---
-        const tiempoRestanteSeg = LIMITE_TIEMPO_TRANSBORDO - navState.tiempoTotalViaje;
-        
-        if (tiempoRestanteSeg > 0) {
-            const minutos = Math.floor(tiempoRestanteSeg / 60);
-            const segundos = tiempoRestanteSeg % 60;
-            tiempoEsperaEl.textContent = `Transbordo: ${minutos}:${segundos < 10 ? '0' : ''}${segundos}`;
-            tiempoEsperaEl.classList.add('transbordo-timer'); // Clase Azul
-        } else {
-            tiempoEsperaEl.textContent = "Tiempo Agotado";
-            tiempoEsperaEl.classList.add('advertencia'); // Clase Roja
-        }
-
+        textoEstado = "En Transbordo";
+        claseEstado = "warning";
     } else if (navState.enMovimiento) {
-        // --- ESTADO 2: En Movimiento ---
-        tiempoEsperaEl.textContent = "En movimiento";
-        tiempoEsperaEl.classList.add('en-movimiento'); // Clase Verde
-    
+        textoEstado = "En Ruta";
+        claseEstado = "ok";
     } else {
-        // --- ESTADO 3: Esperando (Detenido, ej. semáforo) ---
-        const minutos = Math.floor(navState.tiempoDetenido / 60);
-        const segundos = navState.tiempoDetenido % 60;
-        tiempoEsperaEl.textContent = `Esperando: ${minutos}:${segundos < 10 ? '0' : ''}${segundos}`;
-        tiempoEsperaEl.classList.add('advertencia'); // Clase Roja
+        textoEstado = "Detenido";
+        claseEstado = "offline";
     }
-    // ⬆️ FIN DE LA SECCIÓN REEMPLAZADA ⬆️
 
-    // 3. Actualizar tiempo total de viaje
-    const LIMITE_TIEMPO_VIAJE = 7200; // 2 horas en segundos (puedes cambiar esto si quieres)
-    const totalMinutos = Math.floor(navState.tiempoTotalViaje / 60);
-    const totalSegundos = navState.tiempoTotalViaje % 60;
-    
-    tiempoViajeEl.textContent = `Viaje: ${totalMinutos}:${totalSegundos < 10 ? '0' : ''}${totalSegundos}`;
-
-    if (navState.tiempoTotalViaje > LIMITE_TIEMPO_VIAJE) {
-        tiempoViajeEl.classList.add('advertencia');
-    } else {
-        tiempoViajeEl.classList.remove('advertencia');
-    }
+    // Usamos el motor para actualizar la UI
+    NavEngine.actualizarHUDLive(textoTiempo, textoEstado, claseEstado);
 }
 
 
@@ -2592,14 +2565,11 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
         return;
     }
 
-    if (!socketVinden) {
-        socketVinden = io('wss://socketio.campeche.vinden.cloud/app', {
-            transports: ['websocket'],
-            query: { r: '977', EIO: '3', transport: 'websocket' }
+if (!socketVinden) {
+        socketVinden = io('https://socketio.campeche.vinden.cloud/app', {
+            transports: ['websocket', 'polling'] // Quitamos la redundancia y permitimos negociación
         });
         socketVinden.on('connect', () => socketVinden.emit('change-route', idVinden));
-    } else {
-        socketVinden.emit('change-route', idVinden);
     }
 
     const rutaGeoJSON = todasLasRutas.find(r => r.properties.id === filtroRutaId);
@@ -2712,9 +2682,8 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
 
         // Escalonamos la conexión (300ms) para no ahogar la red celular
         setTimeout(() => {
-            const unSocket = io('wss://socketio.campeche.vinden.cloud/app', {
-                transports: ['websocket'],
-                query: { r: '977', EIO: '3', transport: 'websocket' },
+            const unSocket = io('https://socketio.campeche.vinden.cloud/app', {
+                transports: ['websocket', 'polling'], // Quitamos la redundancia
                 forceNew: true 
             });
 
@@ -2820,19 +2789,27 @@ function llamarEscuchaParaPaso(indicePaso) {
     const paso = rutaCompletaPlan[indicePaso];
     if (!paso) return;
 
-    // 🚀 ELIMINAMOS detenerEscuchaBuses() para no matar el satélite
-
     if (paso.tipo === 'caminar' || paso.tipo === 'transbordo') {
         const proximoPasoBus = rutaCompletaPlan[indicePaso + 1];
         if (proximoPasoBus && proximoPasoBus.tipo === 'bus') {
             const rutaId = proximoPasoBus.ruta.properties.id;
             const paraderoDeSubida = proximoPasoBus.paraderoInicio;
+            
+            // 🚀 3A. AÑADE ESTO: Le decimos al satélite a dónde mirar
+            enfoqueNavegacion.rutaId = rutaId;
+            enfoqueNavegacion.paradero = paraderoDeSubida;
+            
             iniciarEscuchaBuses(rutaId, paraderoDeSubida);
         }
     }
     else if (paso.tipo === 'bus') {
         const rutaId = paso.ruta.properties.id;
         const paraderoDeBajada = paso.paraderoFin;
+        
+        // 🚀 3B. AÑADE ESTO TAMBIÉN
+        enfoqueNavegacion.rutaId = rutaId;
+        enfoqueNavegacion.paradero = paraderoDeBajada;
+        
         iniciarEscuchaBuses(rutaId, paraderoDeBajada);
     }
 }
@@ -3171,4 +3148,81 @@ window.simularBus = function() {
             if(etaDiv) etaDiv.style.display = 'none';
         }
     }, 800); // Actualiza cada 0.8 segundos
+};
+
+
+
+export let marcadoresBuses = new Map();
+
+// =========================================================
+// 🧪 HERRAMIENTAS DE PRUEBA Y SIMULACIÓN (Borrar en Producción)
+// =========================================================
+window.simularAbordaje = function(rutaId, unidadId) {
+    if (!rutaCompletaPlan || rutaCompletaPlan.length === 0) {
+        console.warn("⚠️ Primero inicia la ruta en la interfaz.");
+        return;
+    }
+
+    // 🪄 MAGIA: Teletransportar el GPS falso EXACTAMENTE a donde está el paradero
+    let lat = map.getCenter().lat;
+    let lng = map.getCenter().lng;
+    
+    for (let i = pasoActual; i < rutaCompletaPlan.length; i++) {
+        if (rutaCompletaPlan[i].paraderoInicio) {
+            lng = rutaCompletaPlan[i].paraderoInicio.geometry.coordinates[0];
+            lat = rutaCompletaPlan[i].paraderoInicio.geometry.coordinates[1];
+            break;
+        }
+    }
+
+    console.log(`📍 [SIMULADOR] Teletransportado al paradero: ${lat}, ${lng}`);
+
+    const markerFalso = L.marker([lat, lng], { rutaId: rutaId, unidadId: unidadId });
+    markerFalso.bindPopup(`Unidad Falsa ${unidadId}`);
+    marcadoresBuses.set(unidadId, markerFalso); 
+
+    let conteo = 0;
+    const intervalo = setInterval(() => {
+        conteo++;
+// Dentro de tu window.simularAbordaje...
+        handleLocationUpdate({
+            coords: { 
+                latitude: lat, 
+                longitude: lng, 
+                speed: 6.0 // 🚀 21.6 km/h (Activa el match físico de inmediato)
+            } 
+        });
+
+        if (conteo >= 4) {
+            clearInterval(intervalo);
+            marcadoresBuses.delete(unidadId); 
+            console.log(`✅ [SIMULADOR] Abordaje procesado.`);
+        }
+    }, 1000);
+};
+
+window.simularBajada = function() {
+    console.log("🚶‍♂️ [SIMULADOR] Bajando del camión...");
+    window.unidadAbordadaViajeActual = null; 
+    window.candidatoAbordaje = { unidad: null, contador: 0 };
+    
+    // Avanzamos al paso de caminar
+    NavEngine.autoAvanzar(); // 🚀 CORRECCIÓN AQUÍ
+    
+    // Verificamos si queda algún otro camión por tomar en el futuro
+    let quedanBuses = false;
+    for (let i = pasoActual; i < rutaCompletaPlan.length; i++) {
+        if (rutaCompletaPlan[i].tipo === 'bus') { 
+            quedanBuses = true; 
+            break; 
+        }
+    }
+    
+    if (quedanBuses) {
+        activarModoTransbordo(true);
+        console.log("🔄 [SIMULADOR] Transbordo activado. Caminando a la siguiente parada.");
+    } else {
+        activarModoTransbordo(false);
+        console.log("🏁 [SIMULADOR] Último camión. Caminando al destino final.");
+    }
 };
