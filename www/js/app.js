@@ -2686,7 +2686,7 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
 
         // Escalonamos la conexión (300ms) para no ahogar la red celular
         setTimeout(() => {
-            const unSocket = io('wss://socketio.campeche.vinden.cloud/app', {
+            const unSocket = io('wss://tiny-feather-dfb6.alexislugo48.workers.dev/app', {
                 transports: ['websocket'],
                 query: { r: '977', EIO: '3', transport: 'websocket' },
                 forceNew: true 
