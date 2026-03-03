@@ -2567,7 +2567,7 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
 
 if (!socketVinden) {
         // 🚀 AHORA APUNTAMOS AL CLOUDFLARE WORKER
-        socketVinden = io('wss://tiny-feather-dfb6.alexislugo48.workers.dev/app', {
+        socketVinden = io('wss://apibus.rutaskoox.com/app', {
             transports: ['websocket'],
             query: { r: '977', EIO: '3', transport: 'websocket' },
             forceNew: true 
@@ -2688,7 +2688,7 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
 // Escalonamos la conexión (300ms) para no ahogar la red celular
         setTimeout(() => {
             // 🚀 AHORA APUNTAMOS AL CLOUDFLARE WORKER
-            const unSocket = io('wss://tiny-feather-dfb6.alexislugo48.workers.dev/app', {
+            const unSocket = io('wss://apibus.rutaskoox.com/app', {
                 transports: ['websocket'],
                 query: { r: '977', EIO: '3', transport: 'websocket' },
                 forceNew: true 
