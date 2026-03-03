@@ -2566,14 +2566,15 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     }
 
 if (!socketVinden) {
-        // 🚀 AHORA APUNTAMOS AL CLOUDFLARE WORKER
-        socketVinden = io('wss://apibus.rutaskoox.com/app', {
-            transports: ['websocket'],
-            query: { r: '977', EIO: '3', transport: 'websocket' },
+        // 🚀 Cambiamos a https:// y permitimos polling para una negociación suave
+        socketVinden = io('https://apibus.rutaskoox.com/app', {
+            transports: ['websocket', 'polling'], 
+            query: { r: '977' }, // Quitamos EIO y transport manuales, la librería lo hace sola
             forceNew: true 
         });
         socketVinden.on('connect', () => socketVinden.emit('change-route', idVinden));
     } else {
+        socketVinden.connect();
         socketVinden.emit('change-route', idVinden);
     }
 
