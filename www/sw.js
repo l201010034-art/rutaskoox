@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'v5.46'; // Subimos una versión para forzar la actualización
-const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`; // Corregí un pequeño typo de '1oox' a 'koox'
+const CACHE_VERSION = 'v5.52'; // 🚀 Subimos la versión para forzar la actualización en los celulares
+const CACHE_NAME = `rutas-koox-cache-${CACHE_VERSION}`; 
 
 const APP_SHELL_URLS = [
     './',
@@ -19,7 +19,7 @@ const APP_SHELL_URLS = [
     'https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css',
     'https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js',
     
-    // 🚀 NUEVO: Guardamos el escáner en la memoria del celular
+    // Guardamos el escáner en la memoria del celular
     'https://unpkg.com/html5-qrcode' 
 ];
 
@@ -49,14 +49,26 @@ self.addEventListener('activate', (event) => {
             );
         }).then(() => {
             console.log('Service Worker activado y reclamando clientes');
-            return self.clients.claim(); // Toma control inmediato de Safari
+            return self.clients.claim(); // Toma control inmediato de Safari y Chrome
         })
     );
 });
 
 self.addEventListener('fetch', (event) => {
     if (event.request.method !== 'GET') return;
+    
     const requestUrl = new URL(event.request.url);
+
+    // =======================================================================
+    // 🛡️ INMUNIDAD DIPLOMÁTICA: Dejar pasar el tráfico en vivo (WebSockets)
+    // =======================================================================
+    if (
+        requestUrl.hostname.includes('apibus.rutaskoox.com') || 
+        requestUrl.pathname.includes('/socket.io/') ||
+        !requestUrl.protocol.startsWith('http') // Ignora extensiones de navegador que causan bugs
+    ) {
+        return; // Retornamos inmediatamente para que no intente cachearlo
+    }
 
     // Estrategia Network First para datos (asegura datos frescos)
     if (requestUrl.pathname.includes('/data/')) {
@@ -74,7 +86,6 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Estrategia Stale-While-Revalidate para todo lo demás (Velocidad + Actualización)
-    // Esto es mejor para Safari: Muestra lo rápido, pero actualiza en segundo plano
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             const fetchPromise = fetch(event.request).then((networkResponse) => {

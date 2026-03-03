@@ -2566,13 +2566,11 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     }
 
 if (!socketVinden) {
-        // 🚀 Dejamos que Socket.io negocie la conexión automáticamente
         socketVinden = io('https://apibus.rutaskoox.com', {
-            forceNew: true 
+            forceNew: true // Dejamos que negocie WebSockets automáticamente
         });
         
         socketVinden.on('connect', () => {
-            console.log("¡Conectado a mi propio Satélite Koox!");
             socketVinden.emit('change-route', idVinden);
         });
     }
@@ -2685,19 +2683,14 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
         const idVinden = obtenerIdVinden(rutaId);
         if (!idVinden) return;
 
-// Escalonamos la conexión (300ms) para no ahogar la red celular
+        // Escalonamos la conexión (300ms) para no ahogar la red celular
         setTimeout(() => {
-            // 🚀 AHORA APUNTAMOS AL CLOUDFLARE WORKER
-            const unSocket = io('wss://apibus.rutaskoox.com/app', {
-                transports: ['websocket'],
-                query: { r: '977', EIO: '3', transport: 'websocket' },
+            // 🚀 1. AHORA APUNTAMOS A TU PROPIO SATÉLITE KOOX
+            const unSocket = io('https://apibus.rutaskoox.com', {
                 forceNew: true 
             });
 
-            unSocket.on('connect', () => {
-                unSocket.emit('change-route', idVinden);
-            });
-
+            // 🚀 2. CONEXIÓN LIMPIA (Sin duplicados)
             unSocket.on('connect', () => {
                 unSocket.emit('change-route', idVinden);
             });
@@ -2711,12 +2704,11 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
                 } catch(e){}
             }
 
-            const originalOnEvent = unSocket.onevent;
-            unSocket.onevent = function (packet) {
-                const args = packet.data || [];
-                if (args[0] === 'update-location' && args[1] && args[1].data) {
+            // 🚀 3. EVENTO ESTÁNDAR (Reemplaza el hack de 'onevent')
+            unSocket.on('update-location', (payload) => {
+                if (payload && payload.data) {
                     try {
-                        const bus = JSON.parse(args[1].data);
+                        const bus = JSON.parse(payload.data);
                         const lat = parseFloat(bus.latlng[0]);
                         const lng = parseFloat(bus.latlng[1]);
                         const unidadId = bus.unit_id; 
@@ -2787,8 +2779,7 @@ export function iniciarEscuchaMultihilo(rutasIds, paraderosDeInteres) {
                         }
                     } catch (e) {}
                 }
-                originalOnEvent.call(this, packet);
-            };
+            });
             
             socketsVindenMulti.push(unSocket);
 
