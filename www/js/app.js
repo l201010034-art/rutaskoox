@@ -2566,10 +2566,16 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     }
 
 if (!socketVinden) {
-        // 🚀 Conexión directa a tu servidor, sin hacks.
-        socketVinden = io('https://apibus.rutaskoox.com');
+        // 🚀 Nos conectamos a TU satélite, limpiecito y sin llaves secretas
+        socketVinden = io('https://apibus.rutaskoox.com', {
+            transports: ['websocket', 'polling'],
+            forceNew: true
+        });
         
-        socketVinden.on('connect', () => socketVinden.emit('change-route', idVinden));
+        socketVinden.on('connect', () => {
+            console.log("¡Conectado a mi propio Satélite Koox!");
+            socketVinden.emit('change-route', idVinden);
+        });
     }
 
     const rutaGeoJSON = todasLasRutas.find(r => r.properties.id === filtroRutaId);
