@@ -2566,16 +2566,10 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     }
 
 if (!socketVinden) {
-        // 🚀 Cambiamos a https:// y permitimos polling para una negociación suave
-        socketVinden = io('https://apibus.rutaskoox.com/app', {
-            transports: ['websocket', 'polling'], 
-            query: { r: '977' }, // Quitamos EIO y transport manuales, la librería lo hace sola
-            forceNew: true 
-        });
+        // 🚀 Conexión directa a tu servidor, sin hacks.
+        socketVinden = io('https://apibus.rutaskoox.com');
+        
         socketVinden.on('connect', () => socketVinden.emit('change-route', idVinden));
-    } else {
-        socketVinden.connect();
-        socketVinden.emit('change-route', idVinden);
     }
 
     const rutaGeoJSON = todasLasRutas.find(r => r.properties.id === filtroRutaId);
