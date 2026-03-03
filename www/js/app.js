@@ -2566,10 +2566,9 @@ export function iniciarEscuchaBuses(filtroRutaId, paraderoDeInteres, paraderosMa
     }
 
 if (!socketVinden) {
-        // 🚀 Nos conectamos a TU satélite, limpiecito y sin llaves secretas
+        // 🚀 Dejamos que Socket.io negocie la conexión automáticamente
         socketVinden = io('https://apibus.rutaskoox.com', {
-            transports: ['websocket', 'polling'],
-            forceNew: true
+            forceNew: true 
         });
         
         socketVinden.on('connect', () => {
